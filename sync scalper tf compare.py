@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Sync Scalper (M15/M5 Sync) - نسخه‌ی مقایسه‌ی چند تایم‌فریم ورود
+Sync Scalper (M15 بایاس + H1 ترندلاین + ورود ۵m/۱۵m) - فقط شورت
 ------------------------------------------------------------------
-همون استراتژی قبلی (با فیلتر شکست خط‌روند)، ولی به‌جای یه تایم‌فریم ثابت برای
-ورود (M5)، این نسخه ۴ تا رو پشت‌سرهم تست و مقایسه می‌کنه: 15m, 5m, 3m, 1m.
-تایم‌فریم بایاس (M15) برای همه‌شون ثابت می‌مونه - فقط تایم‌فریم ورود عوض میشه.
-
-علاوه بر مقایسه‌ی نتیجه‌ی مالی هر تایم‌فریم، برای هر کدوم گزارش میده که بیشترین
-تعداد سیگنال («سینک» بین M15 و تایم ورود) در کدوم سشن معاملاتی (آسیا/لندن/
-نیویورک، بر حسب UTC) اتفاق افتاده.
+تغییرات نسبت به نسخه‌ی قبلی:
+- فیلتر پرایس‌اکشن (Engulfing) حذف شد
+- فیلتر شکست خط‌روند برگشت، ولی این‌بار روی تایم‌فریم ۱ ساعته (H1) مستقل -
+  بایاس M15 (EMA + ساختار سوینگ) دست‌نخورده مونده، فقط شکست خط‌روند اضافه شده
+- SL دیگه از سوینگ‌پوینت M5 نیست - نسبت به قیمتی که شکست خط‌روند H1 در آن رخ
+  داده، با فاصله‌ی ثابت SL_BREAKOUT_PCT (پیش‌فرض ۱٪) محاسبه میشه
+- مقایسه‌ی دو تایم ورود: 5m و 15m (بایاس M15 و ترندلاین H1 برای هر دو ثابت)
+- فقط شورت فعاله (لانگ غیرفعال، طبق نتیجه‌ی قبلی)
+- فیلترهای ATR (فاصله از EMA، pullback) فعال و دست‌نخورده موندن
 
 نحوه اجرا (روی Replit/Colab):
     pip install ccxt pandas numpy
@@ -22,8 +24,8 @@ from datetime import datetime, timedelta
 
 # ------------------ تنظیمات (دقیقاً مطابق ورودی‌های Pine Script) ------------------
 SYMBOL = "XRP/USDT:USDT"  # فرمت یکپارچه‌ی ccxt برای فیوچرز پرپچوال OKX
-HTF = "15m"     # Higher Timeframe (M15)
-LTF = "5m"      # تایم‌فریم چارت (M5)
+HTF = "15m"     # Higher Timeframe (M15) - بایاس روند (EMA + ساختار سوینگ)
+TREND_TF = "1h"  # تایم‌فریم مستقل برای فیلتر شکست خط‌روند
 MONTHS_BACK = 6
 
 INITIAL_CAPITAL = 10000.0
@@ -36,6 +38,8 @@ MAX_SIGNALS_PER_DAY = 1
 ALLOW_LONG = False   # پوزیشن لانگ حذف شد - طبق دیتای واقعی، شورت ۳ برابر بهتر عمل کرده
 ALLOW_SHORT = True
 
+SL_BREAKOUT_PCT = 1.0  # SL نسبت به قیمت شکست خط‌روند (H1)، نه سوینگ‌پوینت - ۱٪ فاصله
+
 EMA_LEN = 50
 EMA_SLOPE_LOOKBACK = 3
 
@@ -43,12 +47,12 @@ RSI_LEN = 14
 RSI_BUY_MIN = 50           # میونه شد (شل=45، سخت=55) - مومنتوم مثبت خفیف کافیه
 RSI_SELL_MAX = 50          # میونه شد (شل=55، سخت=45)
 
-PIVOT_LEN = 5             # Pivot Left/Right bars (هم برای ساختار M15 هم SL سوینگ M5)
+PIVOT_LEN = 5             # Pivot Left/Right bars (ساختار M15 و شکست خط‌روند H1)
 
 ADX_LEN = 14
 ADX_MIN = 21               # میونه شد (شل=18، سخت=25)
-MAX_ATR_DIST = 2.5        # حداکثر فاصله از EMA50 (ضریب ATR) - فیلتر "خیلی دور نشده"
-PULLBACK_ATR_MAX = 0.8    # میونه شد (شل=1.0، سخت=0.6)
+MAX_ATR_DIST = 2.5        # حداکثر فاصله از EMA50 (ضریب ATR) - فعال، فیلتر "خیلی دور نشده"
+PULLBACK_ATR_MAX = 0.8    # میونه شد (شل=1.0، سخت=0.6) - فعال
 
 MIN_BODY_RATIO = 0.5      # میونه شد (شل=0.4، سخت=0.6)
 
@@ -233,24 +237,91 @@ def merge_htf_bias(ltf_df, htf_df):
     return ltf_df
 
 
+def _line_value_at(x1, y1, x2, y2, x):
+    """معادله‌ی خط بین دو نقطه‌ی سوینگ، مقدارش را در ایندکس x برمی‌گرداند."""
+    if x2 == x1:
+        return y2
+    slope = (y2 - y1) / (x2 - x1)
+    return y1 + slope * (x - x1)
+
+
+def merge_trendline_h1(ltf_df, h1_df):
+    """
+    فیلتر مستقل شکست خط‌روند، روی تایم‌فریم ۱ ساعته (H1) - جدا از بایاس M15.
+    خط نزولی از دو سقف سوینگ H1 آخر (برای شکست به بالا/لانگ)، خط صعودی از دو کف
+    سوینگ H1 آخر (برای شکست به پایین/شورت). برای هر کندل ورود، آخرین کندل H1ای که
+    *قبل از* بسته‌شدنش تمام شده استفاده می‌شود (بدون نگاه به آینده).
+
+    خروجی، علاوه بر trendline_break_up/down، قیمت H1ای که شکست در آن رخ داده
+    (breakout_price_up/down) را هم برمی‌گرداند - برای محاسبه‌ی SL بر پایه‌ی همین
+    قیمت (به‌جای سوینگ‌پوینت خام).
+    """
+    h1_df = h1_df.set_index("timestamp").sort_index()
+    sw_high1, sw_high2, sw_low1, sw_low2 = np.nan, np.nan, np.nan, np.nan
+    sw_high1_idx, sw_high2_idx, sw_low1_idx, sw_low2_idx = None, None, None, None
+    h1_ptr = -1
+    h1_times = h1_df.index.values
+    h1_records = h1_df.to_dict("records")
+
+    break_up_list, break_down_list = [], []
+    breakout_price_up_list, breakout_price_down_list = [], []
+
+    for ts in ltf_df["timestamp"]:
+        while h1_ptr + 1 < len(h1_times) and h1_times[h1_ptr + 1] < np.datetime64(ts):
+            h1_ptr += 1
+            rec = h1_records[h1_ptr]
+            if rec["pivot_high"]:
+                sw_high2, sw_high2_idx = sw_high1, sw_high1_idx
+                sw_high1, sw_high1_idx = rec["high"], h1_ptr
+            if rec["pivot_low"]:
+                sw_low2, sw_low2_idx = sw_low1, sw_low1_idx
+                sw_low1, sw_low1_idx = rec["low"], h1_ptr
+
+        if h1_ptr < 0:
+            break_up_list.append(True)
+            break_down_list.append(True)
+            breakout_price_up_list.append(np.nan)
+            breakout_price_down_list.append(np.nan)
+            continue
+
+        h1_close_val = h1_records[h1_ptr]["close"]
+
+        if sw_high1_idx is not None and sw_high2_idx is not None:
+            break_up = h1_close_val > _line_value_at(
+                sw_high2_idx, sw_high2, sw_high1_idx, sw_high1, h1_ptr)
+        else:
+            break_up = True  # داده‌ی کافی نیست - سخت‌گیر نباش
+
+        if sw_low1_idx is not None and sw_low2_idx is not None:
+            break_down = h1_close_val < _line_value_at(
+                sw_low2_idx, sw_low2, sw_low1_idx, sw_low1, h1_ptr)
+        else:
+            break_down = True
+
+        break_up_list.append(bool(break_up))
+        break_down_list.append(bool(break_down))
+        breakout_price_up_list.append(h1_close_val)
+        breakout_price_down_list.append(h1_close_val)
+
+    ltf_df = ltf_df.copy()
+    ltf_df["h1_break_up"] = break_up_list
+    ltf_df["h1_break_down"] = break_down_list
+    ltf_df["h1_breakout_price_up"] = breakout_price_up_list
+    ltf_df["h1_breakout_price_down"] = breakout_price_down_list
+    return ltf_df
+
+
 def backtest(ltf_df):
     equity = INITIAL_CAPITAL
     position = None  # dict: side, entry, sl, tp, qty
     trades = []
 
-    last_swing_low, last_swing_high = None, None
     signals_today = 0
     last_day = None
 
     n = len(ltf_df)
     for i in range(max(EMA_LEN, PIVOT_LEN * 2, ADX_LEN * 3), n):
         row = ltf_df.iloc[i]
-        confirm_idx = i - PIVOT_LEN
-        if confirm_idx >= PIVOT_LEN:
-            if ltf_df["pivot_low"].iloc[confirm_idx]:
-                last_swing_low = ltf_df["low"].iloc[confirm_idx]
-            if ltf_df["pivot_high"].iloc[confirm_idx]:
-                last_swing_high = ltf_df["high"].iloc[confirm_idx]
 
         day = row["timestamp"].day
         if last_day is None or day != last_day:
@@ -304,35 +375,50 @@ def backtest(ltf_df):
             bull_candle = close > open_ and body_ratio >= MIN_BODY_RATIO
             bear_candle = close < open_ and body_ratio >= MIN_BODY_RATIO
 
-            buy_cond = (ALLOW_LONG and row["htf_bull_bias"] and close > row["ema50"] and pullback_ok and not_too_far
+            # فیلتر مستقل شکست خط‌روند H1 - علاوه بر بایاس M15 لازمه
+            h1_break_up = row.get("h1_break_up", True)
+            h1_break_down = row.get("h1_break_down", True)
+
+            buy_cond = (ALLOW_LONG and row["htf_bull_bias"] and h1_break_up
+                        and close > row["ema50"] and pullback_ok and not_too_far
                         and not_sideways and bull_candle and row["rsi14"] > RSI_BUY_MIN)
-            sell_cond = (ALLOW_SHORT and row["htf_bear_bias"] and close < row["ema50"] and pullback_ok and not_too_far
+            sell_cond = (ALLOW_SHORT and row["htf_bear_bias"] and h1_break_down
+                         and close < row["ema50"] and pullback_ok and not_too_far
                          and not_sideways and bear_candle and row["rsi14"] < RSI_SELL_MAX)
 
-            if buy_cond and last_swing_low is not None and close > last_swing_low:
-                risk = close - last_swing_low
-                risk_amount = equity * (RISK_PCT / 100)
-                qty = risk_amount / risk
-                position = {
-                    "side": "long", "entry": close, "sl": last_swing_low,
-                    "tp": close + risk * RR_MIN, "qty": qty, "entry_time": row["timestamp"],
-                }
-                signals_today += 1
-            elif sell_cond and last_swing_high is not None and last_swing_high > close:
-                risk = last_swing_high - close
-                risk_amount = equity * (RISK_PCT / 100)
-                qty = risk_amount / risk
-                position = {
-                    "side": "short", "entry": close, "sl": last_swing_high,
-                    "tp": close - risk * RR_MIN, "qty": qty, "entry_time": row["timestamp"],
-                }
-                signals_today += 1
+            # SL دیگه از سوینگ‌پوینت خام نیست - نسبت به قیمتی که شکست خط‌روند H1
+            # در آن رخ داده، به فاصله‌ی ثابت SL_BREAKOUT_PCT (پیش‌فرض ۱٪) محاسبه میشه.
+            breakout_price_up = row.get("h1_breakout_price_up", np.nan)
+            breakout_price_down = row.get("h1_breakout_price_down", np.nan)
+
+            if buy_cond and not pd.isna(breakout_price_up):
+                sl_price = breakout_price_up * (1 - SL_BREAKOUT_PCT / 100)
+                risk = close - sl_price
+                if risk > 0:
+                    risk_amount = equity * (RISK_PCT / 100)
+                    qty = risk_amount / risk
+                    position = {
+                        "side": "long", "entry": close, "sl": sl_price,
+                        "tp": close + risk * RR_MIN, "qty": qty, "entry_time": row["timestamp"],
+                    }
+                    signals_today += 1
+            elif sell_cond and not pd.isna(breakout_price_down):
+                sl_price = breakout_price_down * (1 + SL_BREAKOUT_PCT / 100)
+                risk = sl_price - close
+                if risk > 0:
+                    risk_amount = equity * (RISK_PCT / 100)
+                    qty = risk_amount / risk
+                    position = {
+                        "side": "short", "entry": close, "sl": sl_price,
+                        "tp": close - risk * RR_MIN, "qty": qty, "entry_time": row["timestamp"],
+                    }
+                    signals_today += 1
 
     trades_df = pd.DataFrame(trades)
     return equity, trades_df
 
 
-LTF_CANDIDATES = ["15m", "5m", "3m"]  # تایم‌فریم‌های ورود که مقایسه می‌شوند (1m حذف شد)
+LTF_CANDIDATES = ["5m", "15m"]  # مقایسه‌ی دو تایم ورود، طبق درخواست
 
 # سه سشن استاندارد UTC برای تحلیل «بیشترین سینک در کدام سشن»
 SESSIONS = [
@@ -360,7 +446,7 @@ def analyze_sessions(trades_df):
     return counts, top_session
 
 
-def run_one_timeframe(exchange, ltf, htf_df):
+def run_one_timeframe(exchange, ltf, htf_df, h1_df):
     print(f"\n--- تایم‌فریم ورود: {ltf} ---")
     print(f"در حال دانلود دیتای {ltf} برای {SYMBOL}...")
     ltf_df = fetch_ohlcv(exchange, SYMBOL, ltf, MONTHS_BACK)
@@ -368,6 +454,9 @@ def run_one_timeframe(exchange, ltf, htf_df):
 
     print("در حال هماهنگ‌سازی بایاس M15 با این تایم‌فریم (بدون نگاه به آینده)...")
     ltf_df = merge_htf_bias(ltf_df, htf_df)
+
+    print("در حال هماهنگ‌سازی فیلتر شکست خط‌روند H1 با این تایم‌فریم...")
+    ltf_df = merge_trendline_h1(ltf_df, h1_df)
 
     print("در حال اجرای بک‌تست...")
     final_equity, trades_df = backtest(ltf_df)
@@ -399,9 +488,13 @@ def main():
     htf_df = fetch_ohlcv(exchange, SYMBOL, HTF, MONTHS_BACK)
     htf_df = add_htf_indicators(htf_df)
 
+    print(f"در حال دانلود دیتای {TREND_TF} (فیلتر شکست خط‌روند) برای {SYMBOL}...")
+    h1_df = fetch_ohlcv(exchange, SYMBOL, TREND_TF, MONTHS_BACK)
+    h1_df = add_htf_indicators(h1_df)  # فقط pivot_high/pivot_low لازمه، همون تابع کافیه
+
     results = []
     for ltf in LTF_CANDIDATES:
-        res = run_one_timeframe(exchange, ltf, htf_df)
+        res = run_one_timeframe(exchange, ltf, htf_df, h1_df)
         results.append(res)
 
     print("\n\n=== مقایسه‌ی تایم‌فریم‌های ورود (M15 بایاس ثابت) ===")
