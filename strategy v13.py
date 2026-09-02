@@ -1,0 +1,604 @@
+# -*- coding: utf-8 -*-
+"""
+Sync Scalper - فقط فیلتر شکست خط‌روند (بدون هیچ فیلتر دیگه)
+------------------------------------------------------------------
+تغییرات نسبت به نسخه‌ی قبلی:
+- همه‌ی فیلترهای قبلی (بایاس M15، ADX، RSI، فاصله از EMA، فیلتر کندل) حذف شدن
+- فقط یک فیلتر ورود مونده: شکست خط‌روند - خط از دو سقف/کف سوینگ اخیر H1 رسم
+  میشه، ولی تایید شکست روی یک کندل ۱۵ دقیقه‌ای انجام میشه: باید حداقل ۵۵٪ از
+  بازه‌ی اون کندل (high-low) طرفِ شکسته‌شده‌ی خط باشه
+- هر دو جهت (لانگ برای شکست به بالا، شورت برای شکست به پایین) آزادن - جهت
+  معامله دقیقاً هم‌جهت با شکست تعیین میشه
+- مقایسه‌ی دو تایم ورود: 3m و 5m
+- SL: نسبت به قیمتی که شکست در آن تایید شده (کندل ۱۵ دقیقه)، فاصله‌ی ثابت
+  SL_BREAKOUT_PCT = ۳٪
+- TP: بر پایه‌ی ATR، با ضریب استاندارد جهانی TP_ATR_MULT = ۲× ATR (نه دیگه
+  بر پایه‌ی نسبت ریسک/ریوارد نسبت به SL)
+
+نحوه اجرا (روی Replit/Colab):
+    pip install ccxt pandas numpy
+    python sync_scalper_tf_compare.py
+"""
+
+import ccxt
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+
+# ------------------ تنظیمات ------------------
+SYMBOLS = ["XRP/USDT:USDT", "ETH/USDT:USDT"]  # مقایسه‌ی دو نماد
+TREND_TF = "1h"          # تایم‌فریم رسم خط‌روند (از سوینگ‌های H1)
+ATR_TF = "1h"             # ATR برای TP - از یک ساعته محاسبه می‌شه (تغییر کرد)
+MONTHS_BACK = 6
+
+# تست Out-of-Sample: به‌جای «۶ ماه اخیر»، «۶ ماه قبل‌تر از ۶ ماه اخیر» رو می‌گیریم.
+# برای رفتن به حالت عادی (۶ ماه اخیر)، این رو None کن.
+OOS_END_DATE = (datetime.utcnow() - timedelta(days=30 * MONTHS_BACK)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+INITIAL_CAPITAL = 10000.0
+COMMISSION_PCT = 0.05  # درصد کارمزد هر طرف معامله
+
+POSITION_MARGIN = 100.0  # مارجین ثابت هر پوزیشن (نه بر اساس درصد ریسک)
+LEVERAGE = 3.0            # لوریج ۳ برابر - ارزش پوزیشن = مارجین × لوریج
+
+SYMBOL_DIRECTION = {
+    "XRP/USDT:USDT": "short",  # فقط شورت
+    "ETH/USDT:USDT": "long",   # فقط لانگ
+}
+
+SL_BREAKOUT_PCT = 3.0     # SL نسبت به قیمت شکست، فاصله‌ی ثابت ۳٪
+TP_ATR_MULT = 2.0         # TP = ورود ± ۲×ATR (ضریب استاندارد جهانی - قابل تغییر)
+
+ADX_LEN = 14
+ADX_MIN = 21               # فیلتر ADX اضافه شد - فقط بازار غیر-رنج (مقدار قبلی)
+
+PIVOT_LEN = 5             # Pivot Left/Right bars (برای رسم خط‌روند H1)
+
+
+def fetch_ohlcv(exchange, symbol, timeframe, months_back, end_date=None):
+    """
+    end_date: اگر داده شود (رشته‌ی ISO مثل "2026-03-01T00:00:00Z")، بازه‌ی
+    months_back ماه *قبل از* همین تاریخ گرفته می‌شود، نه از "الان". برای تست
+    out-of-sample روی یه بازه‌ی گذشته که موقع طراحی دیده نشده لازمه.
+    """
+    if end_date is not None:
+        end_dt = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ")
+    else:
+        end_dt = datetime.utcnow()
+    start_dt = end_dt - timedelta(days=30 * months_back)
+    since = exchange.parse8601(start_dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    until_ms = int(end_dt.timestamp() * 1000)
+
+    all_candles = []
+    limit = 100  # سقف OKX هر درخواست کمتر از بایننسه (که ۱۵۰۰ بود)
+    while True:
+        candles = exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=limit)
+        if not candles:
+            break
+        candles = [c for c in candles if c[0] <= until_ms]
+        all_candles += candles
+        if not candles or candles[-1][0] >= until_ms:
+            break
+        since = candles[-1][0] + 1
+        if len(candles) < limit:
+            break
+    df = pd.DataFrame(all_candles, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+    return df
+
+
+# ------------------ اندیکاتورها (همه با هموارسازی وایلدر، مطابق TradingView) ------------------
+
+def ema(series, length):
+    return series.ewm(span=length, adjust=False).mean()
+
+
+def rsi(series, length):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1 / length, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1 / length, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, np.nan)
+    out = 100 - (100 / (1 + rs))
+    return out.where(avg_loss != 0, 100.0)
+
+
+def atr(df, length):
+    prev_close = df["close"].shift(1)
+    tr = pd.concat([
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    return tr.ewm(alpha=1 / length, adjust=False).mean()
+
+
+def dmi_adx(df, length):
+    """خروجی: (+DI, -DI, ADX) - دقیقاً مطابق ta.dmi() در Pine Script."""
+    high, low, close = df["high"], df["low"], df["close"]
+    prev_high, prev_low, prev_close = high.shift(1), low.shift(1), close.shift(1)
+
+    tr = pd.concat([
+        high - low, (high - prev_close).abs(), (low - prev_close).abs(),
+    ], axis=1).max(axis=1)
+
+    up_move = high - prev_high
+    down_move = prev_low - low
+    plus_dm = pd.Series(0.0, index=df.index)
+    minus_dm = pd.Series(0.0, index=df.index)
+    plus_mask = (up_move > down_move) & (up_move > 0)
+    minus_mask = (down_move > up_move) & (down_move > 0)
+    plus_dm[plus_mask] = up_move[plus_mask]
+    minus_dm[minus_mask] = down_move[minus_mask]
+
+    atr_w = tr.ewm(alpha=1 / length, adjust=False).mean().replace(0, np.nan)
+    plus_di = 100 * (plus_dm.ewm(alpha=1 / length, adjust=False).mean() / atr_w)
+    minus_di = 100 * (minus_dm.ewm(alpha=1 / length, adjust=False).mean() / atr_w)
+    di_sum = (plus_di + minus_di).replace(0, np.nan)
+    dx = 100 * (plus_di - minus_di).abs() / di_sum
+    adx_val = dx.ewm(alpha=1 / length, adjust=False).mean()
+    return plus_di, minus_di, adx_val
+
+
+def pivot_points(df, left, right):
+    """
+    معادل ta.pivothigh/pivotlow: کندل i پیوت است اگر high/low آن نسبت به `left`
+    کندل قبل و `right` کندل بعد بیشترین/کمترین باشد. غیرقابل‌تکرار (non-repainting):
+    پیوت کندل i فقط از کندل i+right به بعد "دیده" می‌شود.
+    """
+    n = len(df)
+    is_pivot_high = pd.Series(False, index=df.index)
+    is_pivot_low = pd.Series(False, index=df.index)
+    highs, lows = df["high"].values, df["low"].values
+    for i in range(left, n - right):
+        window_h = highs[i - left: i + right + 1]
+        window_l = lows[i - left: i + right + 1]
+        if highs[i] == window_h.max() and (highs[i] > highs[i - left:i]).all() \
+                and (highs[i] > highs[i + 1:i + right + 1]).all():
+            is_pivot_high.iloc[i] = True
+        if lows[i] == window_l.min() and (lows[i] < lows[i - left:i]).all() \
+                and (lows[i] < lows[i + 1:i + right + 1]).all():
+            is_pivot_low.iloc[i] = True
+    return is_pivot_high, is_pivot_low
+
+
+def add_htf_indicators(df):
+    """فقط pivot_high/pivot_low لازمه - برای رسم خط‌روند H1."""
+    df["pivot_high"], df["pivot_low"] = pivot_points(df, PIVOT_LEN, PIVOT_LEN)
+    return df
+
+
+def add_ltf_indicators(df):
+    """فقط ATR لازمه - برای محاسبه‌ی TP."""
+    df["atr5"] = atr(df, 14)
+    return df
+
+
+def merge_atr_to_ltf(ltf_df, atr_tf_df):
+    """
+    ATR که برای TP استفاده میشه، دیگه از خودِ تایم‌فریم ورود نیست - از تایم‌فریم
+    ATR_TF (پیش‌فرض ۳۰ دقیقه) میاد. برای هر کندل ورود، آخرین کندل ATR_TF ای که
+    *قبل از* بسته‌شدنش تمام شده استفاده می‌شود (بدون نگاه به آینده).
+    """
+    atr_tf_df = atr_tf_df.set_index("timestamp").sort_index()
+    atr_times = atr_tf_df.index.values
+    atr_records = atr_tf_df.to_dict("records")
+    atr_ptr = -1
+
+    tp_atr_list = []
+    for ts in ltf_df["timestamp"]:
+        while atr_ptr + 1 < len(atr_times) and atr_times[atr_ptr + 1] < np.datetime64(ts):
+            atr_ptr += 1
+        if atr_ptr < 0:
+            tp_atr_list.append(np.nan)
+        else:
+            tp_atr_list.append(atr_records[atr_ptr]["atr5"])
+
+    ltf_df = ltf_df.copy()
+    ltf_df["tp_atr"] = tp_atr_list
+    return ltf_df
+
+
+def _line_value_at(x1, y1, x2, y2, x):
+    """معادله‌ی خط بین دو نقطه‌ی سوینگ، مقدارش را در ایندکس x برمی‌گرداند."""
+    if x2 == x1:
+        return y2
+    slope = (y2 - y1) / (x2 - x1)
+    return y1 + slope * (x - x1)
+
+
+def compute_h1_break(h1_df):
+    """
+    ورود دقیقاً در لحظه‌ی شکست خط‌روند یک‌ساعته انجام می‌شه - ساده، فقط قیمت
+    بسته‌ی همون کندل H1 نسبت به خط (که از دو سقف/کف سوینگ اخیر رسم شده) چک
+    می‌شه. برای هر کندل H1، سوینگ‌پوینت‌ها فقط از کندل‌های *قبلی* (نه خودش)
+    استفاده می‌کنن - بدون نگاه به آینده.
+    """
+    h1_df = h1_df.reset_index(drop=True).copy()
+    sw_high1, sw_high2, sw_low1, sw_low2 = np.nan, np.nan, np.nan, np.nan
+    sw_high1_idx, sw_high2_idx, sw_low1_idx, sw_low2_idx = None, None, None, None
+
+    break_up_list, break_down_list = [], []
+    breakout_price_up_list, breakout_price_down_list = [], []
+    line_val_up_list, line_val_down_list = [], []
+
+    for i, row in h1_df.iterrows():
+        break_up = False
+        break_down = False
+        line_val_up = np.nan
+        line_val_down = np.nan
+
+        if sw_high1_idx is not None and sw_high2_idx is not None:
+            line_val_up = _line_value_at(sw_high2_idx, sw_high2, sw_high1_idx, sw_high1, i)
+            break_up = row["close"] > line_val_up
+
+        if sw_low1_idx is not None and sw_low2_idx is not None:
+            line_val_down = _line_value_at(sw_low2_idx, sw_low2, sw_low1_idx, sw_low1, i)
+            break_down = row["close"] < line_val_down
+
+        break_up_list.append(bool(break_up))
+        break_down_list.append(bool(break_down))
+        breakout_price_up_list.append(row["close"] if break_up else np.nan)
+        breakout_price_down_list.append(row["close"] if break_down else np.nan)
+        line_val_up_list.append(line_val_up)
+        line_val_down_list.append(line_val_down)
+
+        # سوینگ‌پوینت‌های این کندل رو *بعد* از محاسبه‌ی بالا آپدیت می‌کنیم -
+        # یعنی این کندل نمی‌تونه خودش رو به‌عنوان سوینگ ببینه (بدون نگاه به آینده).
+        if row["pivot_high"]:
+            sw_high2, sw_high2_idx = sw_high1, sw_high1_idx
+            sw_high1, sw_high1_idx = row["high"], i
+        if row["pivot_low"]:
+            sw_low2, sw_low2_idx = sw_low1, sw_low1_idx
+            sw_low1, sw_low1_idx = row["low"], i
+
+    out = h1_df.copy()
+    out["break_up"] = break_up_list
+    out["break_down"] = break_down_list
+    out["breakout_price_up"] = breakout_price_up_list
+    out["breakout_price_down"] = breakout_price_down_list
+    out["line_val_up"] = line_val_up_list
+    out["line_val_down"] = line_val_down_list
+    return out
+
+
+def merge_line_to_ltf(ltf_df, m15_break_df):
+    """
+    تارگت دوم: قیمت خط‌روندی که برای ورود شکسته شده رو (بر پایه‌ی کندل ۱۵ دقیقه)
+    به تایم‌فریم ورود منتقل می‌کنه - برای اینکه بشه چک کرد آیا قیمت دوباره همون
+    خط رو در جهت مخالف شکسته یا نه (یعنی روند نقض شده -> خروج).
+    """
+    m15_break_df = m15_break_df.set_index("timestamp").sort_index()
+    m15_times = m15_break_df.index.values
+    m15_records = m15_break_df.to_dict("records")
+    m15_ptr = -1
+
+    line_up_list, line_down_list = [], []
+    for ts in ltf_df["timestamp"]:
+        while m15_ptr + 1 < len(m15_times) and m15_times[m15_ptr + 1] < np.datetime64(ts):
+            m15_ptr += 1
+        if m15_ptr < 0:
+            line_up_list.append(np.nan)
+            line_down_list.append(np.nan)
+        else:
+            rec = m15_records[m15_ptr]
+            line_up_list.append(rec["line_val_up"])
+            line_down_list.append(rec["line_val_down"])
+
+    ltf_df = ltf_df.copy()
+    ltf_df["line_val_up"] = line_up_list
+    ltf_df["line_val_down"] = line_down_list
+    return ltf_df
+
+
+def compute_entry_triggers(h1_break_df, ltf_df):
+    """
+    ورود دقیقاً در لحظه‌ی شکست خط‌روند یک‌ساعته انجام می‌شه - قیمت ورود همون
+    قیمت شکست (breakout_price = قیمت بسته‌ی کندل H1) هست. چون شکست فقط بعد از
+    بسته‌شدن کامل کندل H1 قابل‌تشخیصه (بدون نگاه به آینده)، لحظه‌ی ورود = زمان
+    بسته‌شدن همون کندل (شروع کندل H1 + ۱ ساعت) که دقیقاً روی مرز یه کندل ۱۵
+    دقیقه‌ای هم می‌افته.
+    خروجی: دیکشنری از trigger_time -> {side, entry_price, breakout_price}
+    """
+    ltf_times = set(ltf_df["timestamp"])
+    triggers = {}
+    for _, row in h1_break_df.iterrows():
+        trigger_time = row["timestamp"] + pd.Timedelta(hours=1)
+        if row["break_up"] and trigger_time in ltf_times:
+            triggers[trigger_time] = {
+                "side": "long",
+                "entry_price": row["breakout_price_up"],
+                "breakout_price": row["breakout_price_up"],
+            }
+        if row["break_down"] and trigger_time in ltf_times:
+            triggers[trigger_time] = {
+                "side": "short",
+                "entry_price": row["breakout_price_down"],
+                "breakout_price": row["breakout_price_down"],
+            }
+    return triggers
+
+
+def backtest(ltf_df, triggers, allowed_side):
+    equity = INITIAL_CAPITAL
+    position = None  # dict: side, entry, sl, tp, qty, mfe (بهترین قیمت دیده‌شده در جهت معامله)
+    trades = []
+
+    n = len(ltf_df)
+    for i in range(max(PIVOT_LEN * 2, 20), n):
+        row = ltf_df.iloc[i]
+        high, low, close = row["high"], row["low"], row["close"]
+        ts = row["timestamp"]
+
+        # ---- مدیریت پوزیشن باز ----
+        if position is not None:
+            side = position["side"]
+
+            # ردیابی بیشترین فاصله‌ای که قیمت به نفع معامله حرکت کرده (MFE) -
+            # صرف‌نظر از این‌که در نهایت TP بخوره یا نه، تا ببینیم قیمت واقعاً
+            # چقدر پتانسیل حرکت داشته.
+            if side == "long":
+                position["mfe"] = max(position["mfe"], high)
+            else:
+                position["mfe"] = min(position["mfe"], low)
+
+            exit_price, exit_reason = None, None
+            # تارگت دوم: شکست معکوس همون خط‌روند روی کندل ۱۵ دقیقه - ساده، فقط
+            # قیمت بسته نسبت به خط. هرکدوم از این دو تارگت (TP یا این) زودتر
+            # برسه خروج می‌زنیم.
+            line_up = row.get("line_val_up", np.nan)
+            line_down = row.get("line_val_down", np.nan)
+            if side == "long" and not pd.isna(line_up) and close < line_up:
+                exit_price, exit_reason = close, "trendline_reversal"
+            elif side == "short" and not pd.isna(line_down) and close > line_down:
+                exit_price, exit_reason = close, "trendline_reversal"
+
+            if exit_price is None:
+                if side == "long":
+                    if low <= position["sl"]:
+                        exit_price, exit_reason = position["sl"], "stop_loss"
+                    elif high >= position["tp"]:
+                        exit_price, exit_reason = position["tp"], "take_profit"
+                else:
+                    if high >= position["sl"]:
+                        exit_price, exit_reason = position["sl"], "stop_loss"
+                    elif low <= position["tp"]:
+                        exit_price, exit_reason = position["tp"], "take_profit"
+
+            if exit_price is not None:
+                if side == "long":
+                    pnl = position["qty"] * (exit_price - position["entry"])
+                    mfe_pct = (position["mfe"] - position["entry"]) / position["entry"] * 100
+                else:
+                    pnl = position["qty"] * (position["entry"] - exit_price)
+                    mfe_pct = (position["entry"] - position["mfe"]) / position["entry"] * 100
+                fee = (position["qty"] * position["entry"] + position["qty"] * exit_price) * (COMMISSION_PCT / 100)
+                pnl -= fee
+                equity += pnl
+                trades.append({
+                    "side": side, "entry_time": position["entry_time"], "entry": position["entry"],
+                    "exit_time": row["timestamp"], "exit": exit_price, "reason": exit_reason,
+                    "pnl": pnl, "equity_after": equity, "mfe_pct": mfe_pct,
+                })
+                position = None
+
+        if pd.isna(row.get("tp_atr", np.nan)) or pd.isna(row.get("adx", np.nan)):
+            continue
+
+        # ---- بررسی سیگنال ورود جدید - دقیقاً روی کندل تریگر (۲۵ دقیقه بعد از شکست) ----
+        if position is None and ts in triggers:
+            trig = triggers[ts]
+            not_sideways = row["adx"] >= ADX_MIN
+            atr_val = row["tp_atr"]  # ATR از تایم‌فریم ATR_TF (۳۰ دقیقه)، نه تایم ورود
+            entry_price = trig["entry_price"]
+            breakout_price = trig["breakout_price"]
+
+            # سایز پوزیشن: مارجین ثابت × لوریج / قیمت ورود (نه بر اساس درصد ریسک)
+            qty = (POSITION_MARGIN * LEVERAGE) / entry_price
+
+            if trig["side"] == "long" and allowed_side in ("long", "both") and not_sideways and not pd.isna(breakout_price):
+                sl_price = breakout_price * (1 - SL_BREAKOUT_PCT / 100)
+                if entry_price > sl_price:
+                    position = {
+                        "side": "long", "entry": entry_price, "sl": sl_price,
+                        "tp": entry_price + TP_ATR_MULT * atr_val, "qty": qty, "entry_time": ts,
+                        "mfe": entry_price,
+                    }
+            elif trig["side"] == "short" and allowed_side in ("short", "both") and not_sideways and not pd.isna(breakout_price):
+                sl_price = breakout_price * (1 + SL_BREAKOUT_PCT / 100)
+                if sl_price > entry_price:
+                    position = {
+                        "side": "short", "entry": entry_price, "sl": sl_price,
+                        "tp": entry_price - TP_ATR_MULT * atr_val, "qty": qty, "entry_time": ts,
+                        "mfe": entry_price,
+                    }
+
+    trades_df = pd.DataFrame(trades)
+    return equity, trades_df
+
+
+LTF_CANDIDATES = ["15m"]  # تایم مانیتورینگ/ورود به ۱۵ دقیقه تغییر کرد - ورود دقیقاً در لحظه‌ی شکست H1
+
+
+def print_full_trades_table(trades_df, label):
+    """
+    جدول کامل همه‌ی معاملات - همه‌ی ردیف‌ها، همه‌ی ستون‌ها. برای همیشه بعد از هر
+    بک‌تست چاپ می‌شه (طبق درخواست)، علاوه بر فایل CSV که همیشه هم ذخیره می‌شه.
+    """
+    print(f"\n\n===== جدول کامل معاملات: {label} ({len(trades_df)} معامله) =====")
+    if len(trades_df) == 0:
+        print("هیچ معامله‌ای ثبت نشد.")
+        return
+    with pd.option_context("display.max_rows", None, "display.max_columns", None,
+                            "display.width", None, "display.float_format", "{:.4f}".format):
+        print(trades_df.to_string())
+
+
+def print_analysis_checklist(trades_df, label):
+    """
+    چک‌لیست استاندارد تحلیل بعد از هر بک‌تست:
+    ۱) تعداد برد/باخت  ۲) تفکیک جهت  ۳) تفکیک سشن زمانی
+    ۴) درصد حرکت قیمت بعد از برد/باخت  ۵) بررسی باخت‌های غیرعادی (بزرگ‌تر از SL)
+    + یه بخش اضافه: مقایسه‌ی فاصله‌ی TP/SL و MFE (فضای باقی‌مونده بعد از TP)
+    """
+    print(f"\n\n===== چک‌لیست تحلیل: {label} =====")
+    if len(trades_df) == 0:
+        print("هیچ معامله‌ای ثبت نشد.")
+        return
+
+    df = trades_df.copy()
+    df["entry_time"] = pd.to_datetime(df["entry_time"])
+    df["hour"] = df["entry_time"].dt.hour
+    df["move_pct"] = (df["exit"] - df["entry"]) / df["entry"] * 100
+    df.loc[df["side"] == "short", "move_pct"] = -df.loc[df["side"] == "short", "move_pct"]
+
+    def session(h):
+        if 0 <= h < 8:
+            return "Asia"
+        if 8 <= h < 16:
+            return "London"
+        return "NewYork"
+
+    df["session"] = df["hour"].apply(session)
+    wins = df[df["pnl"] > 0]
+    losses = df[df["pnl"] <= 0]
+
+    print("---- 1) تعداد برد/باخت ----")
+    print("برد:", len(wins), "| باخت:", len(losses), "| نرخ برد:", round(len(wins) / len(df) * 100, 2), "%")
+
+    print("\n---- 2) تفکیک جهت ----")
+    print("جهت - برد:")
+    print(wins["side"].value_counts())
+    print("جهت - باخت:")
+    print(losses["side"].value_counts())
+
+    print("\n---- 3) تفکیک سشن زمانی (UTC) ----")
+    print("سشن - برد:")
+    print(wins["session"].value_counts())
+    print("سشن - باخت:")
+    print(losses["session"].value_counts())
+
+    print("\n---- 4) درصد حرکت قیمت بعد از برد/باخت ----")
+    print("میانگین حرکت - برد:", round(wins["move_pct"].mean(), 3) if len(wins) else "-")
+    print("میانگین حرکت - باخت:", round(losses["move_pct"].mean(), 3) if len(losses) else "-")
+    print("بیشترین حرکت مثبت (برد):", round(wins["move_pct"].max(), 3) if len(wins) else "-")
+    print("بیشترین حرکت منفی (باخت):", round(losses["move_pct"].min(), 3) if len(losses) else "-")
+
+    print("\n---- 5) باخت‌های غیرعادی (بزرگ‌تر از ۱۰٪) ----")
+    big = losses[losses["move_pct"].abs() > 10]
+    print("تعداد:", len(big))
+    if len(big):
+        print(big[["side", "entry", "exit", "reason", "move_pct", "pnl"]])
+    print("دلیل باخت‌ها:")
+    print(losses["reason"].value_counts())
+
+    print("\n---- گزارش تارگت‌ها: کدوم زودتر رسید؟ ----")
+    print("تفکیک کل معاملات بر اساس دلیل خروج:")
+    print(df["reason"].value_counts())
+    print("درصد هرکدوم از کل:")
+    print((df["reason"].value_counts(normalize=True) * 100).round(2))
+
+    print("\n---- اضافه: فاصله‌ی TP/SL و فضای باقی‌مونده بعد از TP (MFE) ----")
+    tp_hits = df[df["reason"] == "take_profit"]
+    sl_hits = df[df["reason"] == "stop_loss"]
+    if len(tp_hits):
+        print("فاصله‌ی TP (میانگین):", round(tp_hits["move_pct"].mean(), 3), "%")
+    if len(sl_hits):
+        print("فاصله‌ی SL (میانگین):", round(sl_hits["move_pct"].abs().mean(), 3), "%")
+    if len(tp_hits) and len(sl_hits) and sl_hits["move_pct"].abs().mean() != 0:
+        print("نسبت TP به SL:", round(tp_hits["move_pct"].mean() / sl_hits["move_pct"].abs().mean(), 3))
+    if "mfe_pct" in df.columns and len(tp_hits):
+        room_after_tp = tp_hits["mfe_pct"] - tp_hits["move_pct"]
+        print("فضای باقی‌مونده بعد از TP (فقط بردها - یعنی TP چقدر می‌تونست بزرگ‌تر باشه):")
+        print(room_after_tp.describe())
+
+
+def run_one_timeframe(exchange, symbol, ltf, h1_break_df):
+    print(f"\n--- تایم‌فریم ورود: {ltf} ({symbol}) ---")
+    print(f"در حال دانلود دیتای {ltf} برای {symbol}...")
+    ltf_df = fetch_ohlcv(exchange, symbol, ltf, MONTHS_BACK, end_date=OOS_END_DATE)
+    print(f"⚠️ بازه‌ی واقعی دیتای دریافتی ({ltf}): از {ltf_df['timestamp'].min()} تا {ltf_df['timestamp'].max()} ({len(ltf_df)} کندل)")
+
+    _, _, ltf_df["adx"] = dmi_adx(ltf_df, ADX_LEN)
+
+    print("در حال محاسبه‌ی لحظه‌ی دقیق ورود (دقیقاً لحظه‌ی شکست خط‌روند H1)...")
+    triggers = compute_entry_triggers(h1_break_df, ltf_df)
+    print(f"تعداد تریگرهای ورود پیدا‌شده: {len(triggers)}")
+
+    print(f"در حال هماهنگ‌سازی ATR (از {ATR_TF}) برای محاسبه‌ی TP...")
+    ltf_df = merge_atr_to_ltf(ltf_df, h1_break_df)
+
+    print("در حال هماهنگ‌سازی خط‌روند (تارگت دوم) با این تایم‌فریم...")
+    ltf_df = merge_line_to_ltf(ltf_df, h1_break_df)
+
+    print("در حال اجرای بک‌تست...")
+    allowed_side = SYMBOL_DIRECTION.get(symbol, "both")
+    final_equity, trades_df = backtest(ltf_df, triggers, allowed_side)
+
+    safe_symbol = symbol.replace("/", "-").replace(":", "-")
+    safe_ltf = ltf.replace("/", "-")
+    trades_df.to_csv(f"sync_scalper_trades_{safe_symbol}_{safe_ltf}.csv", index=False)
+
+    print_full_trades_table(trades_df, f"{symbol} / {ltf}")
+    print_analysis_checklist(trades_df, f"{symbol} / {ltf}")
+
+    total_trades = len(trades_df)
+    wins = (trades_df["pnl"] > 0).sum() if total_trades else 0
+    win_rate = (wins / total_trades * 100) if total_trades else 0
+    total_pnl = trades_df["pnl"].sum() if total_trades else 0
+
+    return {
+        "symbol": symbol,
+        "ltf": ltf,
+        "final_equity": final_equity,
+        "pnl": total_pnl,
+        "trades": total_trades,
+        "win_rate": win_rate,
+    }
+
+
+def run_one_symbol(exchange, symbol):
+    print(f"\n\n########## نماد: {symbol} ##########")
+    print(f"در حال دانلود دیتای {TREND_TF} (رسم خط‌روند + محاسبه‌ی ATR) برای {symbol}...")
+    h1_df = fetch_ohlcv(exchange, symbol, TREND_TF, MONTHS_BACK, end_date=OOS_END_DATE)
+    print(f"⚠️ بازه‌ی واقعی دیتای دریافتی ({TREND_TF}): از {h1_df['timestamp'].min()} تا {h1_df['timestamp'].max()} ({len(h1_df)} کندل)")
+    h1_df = add_htf_indicators(h1_df)
+    h1_df = add_ltf_indicators(h1_df)  # همون تایم‌فریم (1h) - هم برای خط‌روند هم ATR
+
+    print("در حال محاسبه‌ی شکست خط‌روند روی کندل‌های ۱ ساعته...")
+    h1_break_df = compute_h1_break(h1_df)
+
+    results = []
+    for ltf in LTF_CANDIDATES:
+        res = run_one_timeframe(exchange, symbol, ltf, h1_break_df)
+        results.append(res)
+    return results
+
+
+def main():
+    exchange = ccxt.okx({"enableRateLimit": True})
+    print(f"=== تست Out-of-Sample ===")
+    print(f"بازه‌ی درخواستی: ۶ ماه منتهی به {OOS_END_DATE}")
+
+    all_results = []
+    for symbol in SYMBOLS:
+        all_results += run_one_symbol(exchange, symbol)
+
+    print("\n\n=== مقایسه‌ی نمادها/تایم‌فریم‌های ورود (فقط فیلتر شکست خط‌روند) ===")
+    print(f"بازه: {MONTHS_BACK} ماه | سرمایه اولیه: ${INITIAL_CAPITAL}")
+    print(f"{'نماد':<16}{'تایم‌فریم':<10}{'سرمایه نهایی':<15}{'سود/زیان':<12}{'معاملات':<10}{'نرخ برد':<10}")
+    for r in all_results:
+        print(f"{r['symbol']:<16}{r['ltf']:<10}${r['final_equity']:<14.2f}${r['pnl']:<11.2f}{r['trades']:<10}{r['win_rate']:<9.2f}%")
+
+    summary_df = pd.DataFrame([{
+        "symbol": r["symbol"], "timeframe": r["ltf"], "final_equity": r["final_equity"], "pnl": r["pnl"],
+        "trades": r["trades"], "win_rate": r["win_rate"],
+    } for r in all_results])
+    summary_df.to_csv("sync_scalper_symbol_comparison.csv", index=False)
+    print("\nفایل مقایسه ذخیره شد: sync_scalper_symbol_comparison.csv")
+    print("فایل معاملات هر نماد/تایم‌فریم هم جدا ذخیره شد: sync_scalper_trades_<نماد>_<تایم‌فریم>.csv")
+
+
+if __name__ == "__main__":
+    main()
