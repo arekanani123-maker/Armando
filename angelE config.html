@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AngelE — تنظیمات لمسی بات زنده</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px 12px 60px;
+    background: #0f1115; color: #e8e8ec;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, sans-serif;
+    font-size: 15px; line-height: 1.7;
+  }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .subtitle { color: #9a9aa5; font-size: 13px; margin-bottom: 20px; }
+  .card {
+    background: #181b22; border: 1px solid #2a2e38; border-radius: 14px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .card-title { font-weight: 700; font-size: 15px; margin: 0 0 8px; color: #f5f5f7; }
+  .card-hint { font-size: 12.5px; color: #9a9aa5; margin: 0 0 12px; }
+  .manual-note {
+    background: #241f10; border: 1px solid #6b5a1e; color: #e6c766;
+    border-radius: 10px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 12px;
+  }
+  .locked-note {
+    background: #10201a; border: 1px solid #1e5a3e; color: #7fd4a3;
+    border-radius: 10px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 12px;
+  }
+  .locked-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #22252d; font-size: 13.5px; }
+  .locked-row:last-child { border-bottom: none; }
+  .locked-label { color: #b8b8c0; }
+  .locked-val { color: #7fd4a3; font-weight: 600; font-family: ui-monospace, monospace; }
+  .stepper-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #22252d; }
+  .stepper-row:last-child { border-bottom: none; }
+  .stepper { display: flex; align-items: center; gap: 10px; }
+  .step-btn {
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid #33363f;
+    background: #21242c; color: #fff; font-size: 20px; cursor: pointer;
+  }
+  .step-val { min-width: 90px; text-align: center; font-family: ui-monospace, monospace; font-size: 15px; font-weight: 600; }
+  .label { font-size: 14px; color: #d4d4da; }
+  .computed-box {
+    background: #0b0d11; border: 1px solid #2a2e38; border-radius: 10px;
+    padding: 12px; margin-top: 10px; font-size: 13.5px;
+  }
+  .computed-row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .computed-label { color: #9a9aa5; }
+  .computed-val { color: #f5c451; font-weight: 700; font-family: ui-monospace, monospace; }
+  #cmdOut {
+    background: #0b0d11; border: 1px solid #2a2e38; border-radius: 10px;
+    padding: 12px; font-family: ui-monospace, "SF Mono", monospace; font-size: 12px;
+    white-space: pre-wrap; word-break: break-word; color: #b6f0c9; direction: ltr; text-align: left;
+  }
+  .copy-btn {
+    display: block; width: 100%; margin-top: 10px; padding: 12px; border: none;
+    border-radius: 10px; background: #3d8b5f; color: #fff; font-size: 14.5px;
+    font-weight: 700; cursor: pointer;
+  }
+  .copy-btn:active { background: #2e6b47; }
+  .badge {
+    display: inline-block; background: #2e6b47; color: #fff; font-size: 11px;
+    padding: 2px 8px; border-radius: 20px; margin-right: 6px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<h1>👼 AngelE <span class="badge">Live Bot</span></h1>
+<p class="subtitle">پروژه‌ی جدا و مستقل - تنظیمات لمسی بات زنده‌ی استراتژی ۶ و ۷</p>
+
+<div class="card">
+  <p class="card-title">🔒 استراتژی‌های قفل‌شده</p>
+  <div class="locked-note">
+    منطق سیگنال‌دهی استراتژی ۶ و ۷ (خط‌روند، ورود، SL/TP1/TP3، ADX) کاملاً
+    قفل و اینجا غیرقابل‌تغییره - این ابزار فقط سه پارامتر مدیریت سرمایه رو
+    کنترل می‌کنه.
+  </div>
+  <div class="locked-row"><span class="locked-label">استراتژی ۶</span><span class="locked-val">خط‌روند ۱h، ورود ۱۵m</span></div>
+  <div class="locked-row"><span class="locked-label">استراتژی ۷</span><span class="locked-val">خط‌روند ۳۰m، ورود ۵m</span></div>
+  <div class="locked-row"><span class="locked-label">SL / TP1 / TP3</span><span class="locked-val">۳٪ / ۳.۰۴×ATR / ۵.۰۴×ATR</span></div>
+</div>
+
+<div class="card">
+  <p class="card-title">⚙️ مدیریت سرمایه — کاملاً دستی</p>
+  <div class="manual-note">
+    ⚠️ هیچ مقدار پیش‌فرض یا محاسبه‌ی خودکاری اینجا وجود نداره - هر سه‌تا رو
+    باید خودت صریحاً تنظیم کنی. تا وقتی این صفحه رو باز نکردی و عدد
+    نساختی، کد پیش‌فرض قدیمی (که هنوز توی main.py هست) دست‌نخورده می‌مونه؛
+    باید کد پایین رو کپی و جایگزین کنی تا واقعاً اعمال بشه.
+  </div>
+
+  <div class="stepper-row">
+    <span class="label">حجم والت (سرمایه‌ی کل)</span>
+    <div class="stepper"><button class="step-btn" data-target="capital" data-dir="-1">−</button><span class="step-val" id="capitalVal"></span><button class="step-btn" data-target="capital" data-dir="1">+</button></div>
+  </div>
+  <div class="stepper-row">
+    <span class="label">مارجین هر پوزیشن</span>
+    <div class="stepper"><button class="step-btn" data-target="margin" data-dir="-1">−</button><span class="step-val" id="marginVal"></span><button class="step-btn" data-target="margin" data-dir="1">+</button></div>
+  </div>
+  <div class="stepper-row">
+    <span class="label">لوریج</span>
+    <div class="stepper"><button class="step-btn" data-target="leverage" data-dir="-1">−</button><span class="step-val" id="leverageVal"></span><button class="step-btn" data-target="leverage" data-dir="1">+</button></div>
+  </div>
+
+  <div class="computed-box">
+    <div class="computed-row"><span class="computed-label">ارزش واقعی هر پوزیشن (مارجین × لوریج)</span><span class="computed-val" id="posValueOut">—</span></div>
+    <div class="computed-row"><span class="computed-label">این عدد چند درصد سرمایه‌ی کله</span><span class="computed-val" id="posPctOut">—</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <p class="card-title">📋 خروجی: فایل config.json</p>
+  <p class="card-hint">هر سه استپر بالا رو تنظیم کن، بعد دکمه‌ی «دانلود» رو بزن — همون فایل رو کنار main.py بذار. دیگه لازم نیست هیچ کد پایتونی رو باز یا ویرایش کنی.</p>
+  <div id="cmdOut"></div>
+  <button class="copy-btn" id="downloadBtn">⬇️ دانلود config.json</button>
+</div>
+
+<script>
+const settings = { capital: null, margin: null, leverage: null };
+const STEP = {
+  capital: {min: 100, max: 1000000, step: 100, default: 10000},
+  margin: {min: 10, max: 50000, step: 10, default: 500},
+  leverage: {min: 1, max: 20, step: 1, default: 3},
+};
+
+// عمداً هیچ مقداری از قبل ست نمی‌شه - کاربر باید خودش اولین بار دکمه بزنه
+// تا مقداری تعیین بشه (طبق درخواست: بدون خودکار).
+Object.keys(STEP).forEach(k => { settings[k] = null; });
+
+function fmt(key, val) {
+  if (val === null) return 'تنظیم نشده';
+  if (key === 'leverage') return val + 'x';
+  return '$' + val.toLocaleString('en-US');
+}
+
+function refreshDisplay() {
+  document.getElementById('capitalVal').textContent = fmt('capital', settings.capital);
+  document.getElementById('marginVal').textContent = fmt('margin', settings.margin);
+  document.getElementById('leverageVal').textContent = fmt('leverage', settings.leverage);
+
+  const allSet = settings.capital !== null && settings.margin !== null && settings.leverage !== null;
+  if (allSet) {
+    const posValue = settings.margin * settings.leverage;
+    const posPct = (posValue / settings.capital * 100);
+    document.getElementById('posValueOut').textContent = '$' + posValue.toLocaleString('en-US');
+    document.getElementById('posPctOut').textContent = posPct.toFixed(2) + '%';
+  } else {
+    document.getElementById('posValueOut').textContent = '—';
+    document.getElementById('posPctOut').textContent = '—';
+  }
+  render();
+}
+
+document.querySelectorAll('.step-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.target;
+    const dir = parseInt(btn.dataset.dir);
+    const cfg = STEP[key];
+    let current = settings[key];
+    if (current === null) {
+      // اولین لمس: از مقدار پیش‌فرض شروع می‌شه، ولی از همینجا به بعد کاملاً دستیه
+      current = cfg.default;
+    } else {
+      current = current + dir * cfg.step;
+    }
+    current = Math.max(cfg.min, Math.min(cfg.max, current));
+    settings[key] = current;
+    refreshDisplay();
+  });
+});
+
+function buildConfigObject() {
+  if (settings.capital === null || settings.margin === null || settings.leverage === null) {
+    return null;
+  }
+  return {
+    POSITION_MARGIN: settings.margin,
+    LEVERAGE: settings.leverage,
+    INITIAL_CAPITAL: settings.capital,
+  };
+}
+
+function buildOutput() {
+  const cfg = buildConfigObject();
+  if (cfg === null) {
+    return '// Set all three steppers above (wallet size, margin, leverage)\n// before config.json can be generated.';
+  }
+  return JSON.stringify(cfg, null, 2);
+}
+
+function render() {
+  document.getElementById('cmdOut').textContent = buildOutput();
+}
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const cfg = buildConfigObject();
+  if (cfg === null) {
+    alert('اول هر سه استپر (حجم والت، مارجین، لوریج) رو با دکمه‌های +/- تنظیم کن.');
+    return;
+  }
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'config.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  const btn = document.getElementById('downloadBtn');
+  const old = btn.textContent;
+  btn.textContent = '✅ دانلود شد!';
+  setTimeout(() => { btn.textContent = old; }, 1500);
+});
+
+refreshDisplay();
+</script>
+
+</body>
+</html>
