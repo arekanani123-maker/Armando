@@ -1,1 +1,172 @@
-{"POSITION_MARGIN": 10, "LEVERAGE": 2, "INITIAL_CAPITAL": 290, "TRADING_ENABLED_STRATEGY_6": true, "TRADING_ENABLED_STRATEGY_7": false, "AUTO_LEVERAGE": false, "SYMBOLS_STRATEGY_6": {"XRP/USDT:USDT": "short", "ETH/USDT:USDT": "long", "BTC/USDT:USDT": "both", "ADA/USDT:USDT": "both", "SOL/USDT:USDT": "both", "DOGE/USDT:USDT": "both", "SUI/USDT:USDT": "both"}, "SYMBOLS_STRATEGY_7": {"XRP/USDT:USDT": "both", "ETH/USDT:USDT": "both", "BTC/USDT:USDT": "both", "ADA/USDT:USDT": "both", "SOL/USDT:USDT": "both", "DOGE/USDT:USDT": "both", "SUI/USDT:USDT": "both"}, "PARAMS_STRATEGY_6": {"TREND_TF": "1h", "ATR_TF": "15m", "ENTRY_TF": "15m", "SL_BREAKOUT_PCT": 1, "TP_ATR_MULT": 4.0, "TP3_ATR_MULT": 5.04, "ADX_LEN": 14, "ADX_MIN": 21, "ADX_ENABLED": true, "PIVOT_LEN": 5}, "PARAMS_STRATEGY_7": {"TREND_TF": "30m", "ATR_TF": "15m", "ENTRY_TF": "5m", "SL_BREAKOUT_PCT": 3, "TP_ATR_MULT": 3.04, "TP3_ATR_MULT": 5.04, "ADX_LEN": 7, "ADX_MIN": 16, "ADX_ENABLED": false, "PIVOT_LEN": 5}}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Live Bot Config</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #12181f;
+    --border: #1f2937;
+    --text: #e6edf3;
+    --dim: #8b949e;
+    --accent: #3fb950;
+    --accent-dim: #2ea043;
+    --off: #6e7681;
+    --warn: #d29922;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Vazirmatn, Tahoma, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 28px 18px 60px;
+  }
+  header {
+    margin-bottom: 28px;
+  }
+  header h1 {
+    font-size: 1.5rem;
+    margin: 0 0 4px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  header p {
+    margin: 0;
+    color: var(--dim);
+    font-size: 0.9rem;
+  }
+  .section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title h2 {
+    font-size: 0.95rem;
+    margin: 0;
+    font-weight: 600;
+  }
+  .badge {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .badge.on { background: rgba(63,185,80,0.15); color: var(--accent); }
+  .badge.off { background: rgba(110,118,129,0.15); color: var(--off); }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: var(--dim); }
+  .row .v { font-weight: 600; direction: ltr; }
+  .sym-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 4px 16px 12px;
+  }
+  .sym-row {
+    display: contents;
+  }
+  .sym-row .name {
+    padding: 8px 0;
+    font-size: 0.88rem;
+    direction: ltr;
+    text-align: left;
+  }
+  .sym-row .dir {
+    padding: 8px 0;
+    font-size: 0.78rem;
+    text-align: left;
+    font-weight: 600;
+  }
+  .dir.both { color: var(--dim); }
+  .dir.long { color: var(--accent); }
+  .dir.short { color: #f85149; }
+  footer {
+    text-align: center;
+    color: var(--off);
+    font-size: 0.78rem;
+    margin-top: 24px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>پیکربندی بات زنده</h1>
+    <p>استراتژی ۶ — نسخه‌ی ۴ (تک‌هدفه، SL=۱٪)</p>
+  </header>
+
+  <div class="section">
+    <div class="section-title"><h2>سرمایه و ریسک</h2></div>
+    <div class="row"><span class="k">مارجین هر پوزیشن</span><span class="v">$10</span></div>
+    <div class="row"><span class="k">لوریج</span><span class="v">2x</span></div>
+    <div class="row"><span class="k">سرمایه‌ی اولیه</span><span class="v">$290</span></div>
+    <div class="row"><span class="k">لوریج خودکار</span><span class="v">false</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">
+      <h2>استراتژی ۶</h2>
+      <span class="badge on">فعال</span>
+    </div>
+    <div class="row"><span class="k">TREND_TF</span><span class="v">1h</span></div>
+    <div class="row"><span class="k">ATR_TF</span><span class="v">15m</span></div>
+    <div class="row"><span class="k">ENTRY_TF</span><span class="v">15m</span></div>
+    <div class="row"><span class="k">SL_BREAKOUT_PCT</span><span class="v">1%</span></div>
+    <div class="row"><span class="k">TP_ATR_MULT</span><span class="v">4.0×ATR</span></div>
+    <div class="row"><span class="k">ADX_ENABLED</span><span class="v">true</span></div>
+    <div class="row"><span class="k">ADX_MIN / ADX_LEN</span><span class="v">21 / 14</span></div>
+    <div class="row"><span class="k">PIVOT_LEN</span><span class="v">5</span></div>
+    <div class="sym-grid">
+      <div class="sym-row"><div class="name">XRP/USDT:USDT</div><div class="dir short">SHORT</div></div>
+      <div class="sym-row"><div class="name">ETH/USDT:USDT</div><div class="dir long">LONG</div></div>
+      <div class="sym-row"><div class="name">BTC/USDT:USDT</div><div class="dir both">BOTH</div></div>
+      <div class="sym-row"><div class="name">ADA/USDT:USDT</div><div class="dir both">BOTH</div></div>
+      <div class="sym-row"><div class="name">SOL/USDT:USDT</div><div class="dir both">BOTH</div></div>
+      <div class="sym-row"><div class="name">DOGE/USDT:USDT</div><div class="dir both">BOTH</div></div>
+      <div class="sym-row"><div class="name">SUI/USDT:USDT</div><div class="dir both">BOTH</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">
+      <h2>استراتژی ۷</h2>
+      <span class="badge off">خاموش</span>
+    </div>
+    <div class="row"><span class="k">TREND_TF</span><span class="v">30m</span></div>
+    <div class="row"><span class="k">ENTRY_TF</span><span class="v">5m</span></div>
+    <div class="row"><span class="k">SL_BREAKOUT_PCT</span><span class="v">3%</span></div>
+    <div class="row"><span class="k">TP_ATR_MULT</span><span class="v">3.04×ATR</span></div>
+    <div class="row"><span class="k">ADX_ENABLED</span><span class="v">false</span></div>
+  </div>
+
+  <footer>بدونِ کلید یا اطلاعاتِ حساس — فقط پارامترهایِ استراتژی</footer>
+
+</div>
+</body>
+</html>
