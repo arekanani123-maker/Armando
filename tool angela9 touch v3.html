@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تنظیماتِ Angela9</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F6; --panel:#FFFFFF; --ink:#16233A; --muted:#5B6880; --line:#D5DCE7;
+  --base:#24375A; --base-ink:#FFFFFF; --long:#0E8C7B; --short:#C94B3B; --amber:#D99A12; --amber-soft:#FFF3D6;
+  --field:#F4F6FA; --focus:#2F6FE0;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1726; --panel:#18233A; --ink:#E8EDF6; --muted:#9AA7BF; --line:#2A3A57;
+    --base:#3B5788; --base-ink:#FFFFFF; --long:#2BB59F; --short:#E7735F; --amber:#F2B53A; --amber-soft:#3A3220;
+    --field:#202D47; --focus:#7FA8FF; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1726; --panel:#18233A; --ink:#E8EDF6; --muted:#9AA7BF; --line:#2A3A57;
+  --base:#3B5788; --base-ink:#FFFFFF; --long:#2BB59F; --short:#E7735F; --amber:#F2B53A; --amber-soft:#3A3220;
+  --field:#202D47; --focus:#7FA8FF; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 88px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:"Vazirmatn",Tahoma,"Segoe UI",sans-serif;font-size:16px;line-height:1.6;-webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding:0 14px 120px}
+
+/* نوارِ بالا */
+.top{padding:14px 0 4px}
+.top h1{font-size:1.45rem;font-weight:800;margin:0;letter-spacing:-.01em}
+.top .sub{color:var(--muted);font-size:.86rem;margin:2px 0 0}
+.actions{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--line);
+  display:grid;grid-template-columns:1.35fr 1fr auto;gap:8px}
+.actions .btn{padding:9px 10px;min-height:44px;font-size:.9rem;line-height:1.3}
+.actions .btn b{color:var(--amber);font-weight:800}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;min-height:46px;cursor:pointer}
+.btn.primary{background:var(--base);color:var(--base-ink)}
+.btn.ghost{background:var(--panel);border:1px solid var(--line)}
+.btn.reset{background:var(--amber-soft);color:var(--ink);border:1px solid var(--amber)}
+.btn[disabled]{opacity:.45}
+.changed-count{font-size:.86rem;color:var(--muted);margin:4px 0 0}
+.changed-count b{color:var(--amber)}
+
+/* بخش‌ها */
+section{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}
+section>h2{font-size:1.08rem;font-weight:800;margin:0 0 4px}
+section>p.hint{color:var(--muted);font-size:.85rem;margin:0 0 12px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .lbl{flex:1;min-width:0}
+.row .lbl small{display:block;color:var(--muted);font-size:.8rem;line-height:1.45}
+
+/* نقطه‌یِ «تغییر از بهترین حالت» */
+.dot{width:28px;height:28px;border-radius:50%;border:0;background:transparent;flex:none;display:grid;place-items:center;cursor:pointer;padding:0}
+.dot::after{content:"";width:12px;height:12px;border-radius:50%;background:transparent}
+.dot.on::after{background:var(--amber);box-shadow:0 0 0 4px var(--amber-soft)}
+.dot:not(.on){pointer-events:none}
+
+/* سوییچ */
+.sw{position:relative;width:54px;height:32px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:20px;background:var(--line);transition:background .15s}
+.sw span::after{content:"";position:absolute;top:3px;right:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw input:checked+span{background:var(--long)}
+.sw input:checked+span::after{transform:translateX(-22px)}
+.sw input:focus-visible+span{outline:3px solid var(--focus);outline-offset:2px}
+
+/* دکمه‌هایِ چندگزینه‌ای */
+.seg{display:flex;background:var(--field);border-radius:12px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 10px;min-height:40px;font-weight:600;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--panel);box-shadow:0 0 0 1px var(--line);font-weight:800}
+.seg.wide{width:100%}
+
+/* +/− */
+.step{display:flex;align-items:center;background:var(--field);border-radius:12px;flex:none}
+.step button{width:44px;height:44px;border:0;background:transparent;font-size:1.35rem;font-weight:700;cursor:pointer}
+.step output{min-width:58px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums;direction:ltr}
+
+/* نسخه‌ها */
+.ver{border-top:1px solid var(--line);padding:10px 0}
+.ver:first-of-type{border-top:0}
+.ver-head{display:flex;align-items:center;gap:10px}
+.ver-no{width:34px;height:34px;border-radius:10px;background:var(--field);display:grid;place-items:center;font-weight:800;flex:none}
+.ver.on .ver-no{background:var(--base);color:var(--base-ink)}
+.ver-sum{flex:1;font-size:.88rem;color:var(--muted);min-width:0}
+.ver-sum b{color:var(--ink);font-weight:700}
+.tag-long{color:var(--long);font-weight:700}
+.tag-short{color:var(--short);font-weight:700}
+.ver-edit{display:none;padding:10px 0 2px 0;gap:10px;flex-direction:column}
+.ver.open .ver-edit{display:flex}
+.ver-edit .line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ver-edit .line>span{min-width:110px;color:var(--muted);font-size:.85rem}
+.more{border:0;background:transparent;color:var(--focus);font-weight:700;padding:6px 4px;cursor:pointer}
+
+/* پله‌ها */
+.steps-grid{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-top:8px}
+.steps-grid .step{justify-content:space-between}
+.steps-grid .step button{width:36px;height:40px;font-size:1.2rem}
+.steps-grid .step output{min-width:44px;font-size:.92rem}
+.steps-grid .h{font-size:.8rem;color:var(--muted)}
+.sum-warn{color:var(--short);font-size:.85rem;margin-top:6px;display:none}
+.sum-warn.show{display:block}
+
+/* نمادها */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{display:inline-flex;align-items:center;border-radius:999px;background:var(--field);border:1px solid var(--line);overflow:hidden}
+.chip .nm{padding:6px 12px 6px 6px;font-weight:800;direction:ltr}
+.chip .dir{border:0;padding:6px 10px;font-size:.82rem;font-weight:700;cursor:pointer;background:transparent}
+.chip .dir.both{color:var(--muted)} .chip .dir.long{color:var(--long)} .chip .dir.short{color:var(--short)}
+.chip .x{border:0;background:transparent;width:34px;height:34px;font-size:1.1rem;cursor:pointer;color:var(--muted)}
+.add{display:flex;gap:8px;margin-top:10px}
+.add input{flex:1;min-width:0;border:1px solid var(--line);background:var(--field);border-radius:12px;padding:10px 12px;direction:ltr;text-transform:uppercase}
+
+/* JSON */
+textarea{width:100%;min-height:150px;border:1px solid var(--line);background:var(--field);border-radius:12px;padding:10px;direction:ltr;font-size:.8rem;line-height:1.45;resize:vertical}
+details summary{cursor:pointer;font-weight:700;padding:6px 0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.note{font-size:.82rem;color:var(--muted);margin:10px 2px 0}
+.num{width:132px;flex:none;border:1px solid var(--line);background:var(--field);border-radius:12px;padding:10px 12px;direction:ltr;text-align:center;font-weight:800;font-size:1rem}
+.derived{display:flex;justify-content:space-between;gap:10px;background:var(--field);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:.9rem}
+.derived b{font-variant-numeric:tabular-nums;direction:ltr}
+.warn{color:var(--short);font-size:.85rem;margin-top:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>تنظیماتِ Angela9</h1>
+    <div class="sub">نقطه‌یِ زرد یعنی با بهترین حالت فرق داره؛ بزنش تا همون یکی برگرده.</div>
+    <div class="changed-count" id="changedCount"></div>
+  </header>
+  <div class="actions">
+    <button class="btn reset" id="resetAll">بازگشت به بهترین حالت</button>
+    <button class="btn primary" id="save">ذخیرهٔ config.json</button>
+    <button class="btn ghost" id="copy">کپی</button>
+  </div>
+
+  <section aria-labelledby="h-acc">
+    <h2 id="h-acc">حساب</h2>
+    <p class="hint">برایِ همه‌یِ استراتژی‌هایِ بات مشترکه. «بازگشت به بهترین حالت» این‌ها رو عوض نمی‌کنه.</p>
+    <div class="row"><div class="lbl">حجمِ کیف‌پول<small>دلار</small></div><input class="num" id="accCapital" inputmode="decimal" aria-label="حجمِ کیف‌پول"></div>
+    <div class="row"><div class="lbl">مارجینِ هر معامله<small>دلار</small></div><input class="num" id="accMargin" inputmode="decimal" aria-label="مارجینِ هر معامله"></div>
+    <div class="row"><div class="lbl">لوریج<small>برابر</small></div><div class="step" data-acc="leverage"></div></div>
+    <div class="row"><div class="lbl">لوریجِ خودکار<small>از تنظیمِ فعلیِ هر نماد در OKX استفاده کن؛ لوریجِ بالا فقط پشتیبان</small></div><label class="sw"><input type="checkbox" id="accAuto" aria-label="لوریجِ خودکار"><span></span></label></div>
+    <div class="derived"><span>اندازه‌یِ هر پوزیشن</span><b id="accSize"></b></div>
+    <div class="warn" id="accWarn" hidden></div>
+  </section>
+
+  <section aria-labelledby="h-ver">
+    <h2 id="h-ver">نسخه‌ها</h2>
+    <p class="hint">هر نسخه کلیدِ خودش رو داره. نسخه‌هایی که رویِ یه نماد هم‌زمان روشن باشن، فقط اولی وارد میشه.</p>
+    <div id="versions"></div>
+  </section>
+
+  <section aria-labelledby="h-entry">
+    <h2 id="h-entry">ورود</h2>
+    <div class="row"><div class="lbl">تایم‌فریمِ ورود<small>۱۵ دقیقه یعنی همون کندلِ سیگنال؛ بقیه با کراسِ MA5/MA20 رویِ تایمِ پایین</small></div><button class="dot" data-key="entry_tf" aria-label="برگرداندنِ تایم‌فریمِ ورود"></button></div>
+    <div class="seg wide" data-seg="entry_tf"></div>
+    <div class="row" id="winRow"><div class="lbl">مهلتِ کراسِ تایمِ پایین<small>بعد از سیگنالِ ۱۵ دقیقه</small></div><button class="dot" data-key="window" aria-label="برگرداندنِ مهلت"></button></div>
+    <div class="seg wide" data-seg="window" id="winSeg"></div>
+  </section>
+
+  <section aria-labelledby="h-exit">
+    <h2 id="h-exit">خروج</h2>
+    <div class="seg wide" data-seg="exit" style="margin-bottom:6px"></div>
+    <div id="fixedBox">
+      <div class="row"><div class="lbl">هدف<small>درصد از قیمتِ ورود</small></div><button class="dot" data-key="tp" aria-label="برگرداندنِ هدف"></button><div class="step" data-step="tp"></div></div>
+      <div class="row"><div class="lbl">حدِ ضرر<small>درصد از قیمتِ ورود</small></div><button class="dot" data-key="sl" aria-label="برگرداندنِ حدِ ضرر"></button><div class="step" data-step="sl"></div></div>
+    </div>
+    <div id="stepsBox">
+      <div class="row"><div class="lbl">فاصله‌یِ SL از پیووت<small>درصد پشتِ آخرین کف/سقفِ تأییدشده</small></div><button class="dot" data-key="sl_pad" aria-label="برگرداندنِ فاصله‌یِ SL"></button><div class="step" data-step="sl_pad"></div></div>
+      <div class="row"><div class="lbl">پله‌ها<small>هدف بر حسبِ R (فاصله‌یِ ورود تا SL) و سهمِ هر پله</small></div><button class="dot" data-key="steps" aria-label="برگرداندنِ پله‌ها"></button></div>
+      <div class="steps-grid" id="stepsGrid"></div>
+      <div class="sum-warn" id="sumWarn">جمعِ سهم‌ها باید ۱۰۰٪ باشه.</div>
+      <div class="row"><div class="lbl">بعد از پله‌یِ اول، SL رویِ ورود</div><button class="dot" data-key="move_be" aria-label="برگرداندن"></button><label class="sw"><input type="checkbox" data-bool="move_be" aria-label="SL رویِ ورود"><span></span></label></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-cyc">
+    <h2 id="h-cyc">چرخه، مدت و قانون‌ها</h2>
+    <div class="row"><div class="lbl">بستن با تغییرِ چرخه</div><button class="dot" data-key="cycle_close" aria-label="برگرداندن"></button><label class="sw"><input type="checkbox" data-bool="cycle_close" aria-label="بستن با تغییرِ چرخه"><span></span></label></div>
+    <div class="row"><div class="lbl">حداکثر مدتِ پوزیشن<small>روز</small></div><button class="dot" data-key="max_days" aria-label="برگرداندن"></button><div class="step" data-step="max_days"></div></div>
+    <div class="row"><div class="lbl">شیبِ چرخه<small>MA200 نسبت به چند کندل قبل</small></div><button class="dot" data-key="slope" aria-label="برگرداندن"></button><div class="step" data-step="slope"></div></div>
+    <div class="row"><div class="lbl">قانونِ MA200<small>لانگ: MA200ِ روزانه و ۴h زیرِ قیمت (یا ۱h در چرخه‌یِ نزولی) — شورت قرینه</small></div><button class="dot" data-key="ma200" aria-label="برگرداندن"></button><label class="sw"><input type="checkbox" data-bool="ma200" aria-label="قانونِ MA200"><span></span></label></div>
+    <div class="row"><div class="lbl">محافظ<small>ورود نه اگه استراتژیِ دیگه‌ای رویِ نماد پوزیشن داره</small></div><button class="dot" data-key="guard" aria-label="برگرداندن"></button><label class="sw"><input type="checkbox" data-bool="guard" aria-label="محافظ"><span></span></label></div>
+    <div class="row"><div class="lbl">حداکثر فاصله‌یِ قیمت از کلوزِ سیگنال<small>درصد؛ اگه بیشتر باشه وارد نمیشه</small></div><button class="dot" data-key="drift" aria-label="برگرداندن"></button><div class="step" data-step="drift"></div></div>
+  </section>
+
+  <section aria-labelledby="h-sym">
+    <h2 id="h-sym">نمادها</h2>
+    <div class="row"><div class="lbl">کدوم نمادها<small>رویِ جهتِ هر نماد بزن: هر دو ← فقط لانگ ← فقط شورت</small></div><button class="dot" data-key="symbols" aria-label="برگرداندنِ نمادها"></button></div>
+    <div class="seg wide" data-seg="sym_mode"></div>
+    <div id="symBox">
+      <div class="chips" id="chips"></div>
+      <div class="add"><input id="newSym" placeholder="SOL" aria-label="نمادِ جدید" autocomplete="off" autocapitalize="characters"><button class="btn ghost" id="addSym">افزودن</button></div>
+    </div>
+    <p class="note" id="allNote">همه‌یِ فیوچرزِ دائمیِ USDT در OKX — بات خودش فهرست رو می‌گیره.</p>
+  </section>
+
+  <section aria-labelledby="h-io">
+    <h2 id="h-io">config.json</h2>
+    <p class="hint">اگه config.json داری، اول اینجا بیارش تا بقیه‌یِ تنظیماتِ بات (کیف‌پول، مارجین، استراتژی‌هایِ دیگه) دست نخوره.</p>
+    <div class="bar"><label class="btn ghost" for="fileIn" style="display:inline-flex;align-items:center">بارگذاریِ فایل</label><input type="file" id="fileIn" accept=".json,application/json" hidden></div>
+    <details style="margin-top:10px"><summary>یا متنش رو اینجا بچسبون</summary><textarea id="pasteIn" placeholder="{ ... }"></textarea><button class="btn ghost" id="loadPaste" style="margin-top:8px">خواندنِ متن</button></details>
+    <details style="margin-top:6px"><summary>پیش‌نمایشِ خروجی</summary><textarea id="out" readonly></textarea></details>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+"use strict";
+// ---------------------------------------------------------------- بهترین حالت (از بک‌تست‌ها)
+const BEST = {
+  versions: {
+    1:{on:true, cycle:"4h",div:true, K:1,dirs:"both"},
+    2:{on:false,cycle:"4h",div:true, K:0,dirs:"both"},
+    3:{on:false,cycle:"4h",div:false,K:1,dirs:"long"},
+    4:{on:false,cycle:"4h",div:false,K:0,dirs:"long"},
+    5:{on:false,cycle:"4h",div:true, K:2,dirs:"both"},
+    6:{on:false,cycle:"4h",div:false,K:2,dirs:"long"},
+    7:{on:false,cycle:"1d",div:true, K:2,dirs:"both"},
+  },
+  entry_tf:"15m", window:60, exit:"fixed5", tp:5, sl:5, sl_pad:0.5,
+  steps:[[2,33],[4,33],[6,34]], move_be:true, cycle_close:true, max_days:60, slope:30,
+  ma200:true, guard:true, drift:0.5, sym_mode:"list",
+  symbols:[["BTC","both"],["ETH","both"],["FIL","both"],["XRP","both"]],
+};
+const ACCOUNT_DEFAULT = {capital:500, margin:50, leverage:3, auto_lev:false};
+const STEPS = {tp:{min:0.5,max:50,inc:0.5,fmt:v=>v.toFixed(1)+"%"}, sl:{min:0.5,max:50,inc:0.5,fmt:v=>v.toFixed(1)+"%"},
+  sl_pad:{min:0,max:5,inc:0.1,fmt:v=>v.toFixed(1)+"%"}, max_days:{min:1,max:365,inc:1,fmt:v=>String(v)},
+  slope:{min:5,max:200,inc:5,fmt:v=>String(v)}, drift:{min:0.1,max:5,inc:0.1,fmt:v=>v.toFixed(1)+"%"}};
+const SEGS = {entry_tf:[["15m","۱۵ دقیقه"],["1m","۱ دقیقه"],["3m","۳ دقیقه"],["5m","۵ دقیقه"]],
+  window:[[15,"۱۵ دقیقه"],[60,"۱ ساعت"],[240,"۴ ساعت"]], exit:[["fixed5","ثابت (هدف/SL ٪)"],["steps","پله‌ای (پیووت + R)"]],
+  sym_mode:[["list","فهرستِ من"],["all","همه‌یِ نمادها"]]};
+const clone = o => JSON.parse(JSON.stringify(o));
+const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+let S = Object.assign(clone(BEST), {account: clone(ACCOUNT_DEFAULT)}), base = {};
+try { const s = localStorage.getItem("angela9_touch_v3"); if (s) { const o = JSON.parse(s); S = Object.assign(clone(BEST), {account: clone(ACCOUNT_DEFAULT)}, o.S||{}); base = o.base||{}; } } catch(e) {}
+const persist = () => { try { localStorage.setItem("angela9_touch_v3", JSON.stringify({S, base})); } catch(e) {} };
+
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const toast = m => { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("show"), 2200); };
+const dirTxt = {both:"لانگ + شورت", long:"فقط لانگ", short:"فقط شورت"};
+
+// ---------------------------------------------------------------- نسخه‌ها
+function renderVersions(){
+  const box = $("#versions"); const open = new Set($$(".ver.open").map(e=>e.dataset.v)); box.innerHTML = "";
+  for (const v of Object.keys(S.versions)) {
+    const c = S.versions[v], el = document.createElement("div");
+    el.className = "ver" + (c.on?" on":"") + (open.has(v)?" open":""); el.dataset.v = v;
+    const ch = !same(c, BEST.versions[v]);
+    el.innerHTML = `<div class="ver-head"><div class="ver-no">${v}</div>
+      <div class="ver-sum">چرخه <b>${c.cycle}</b>، حداقلِ فیلتر <b>${c.K}</b><br><span class="${c.dirs==="long"?"tag-long":""}">${dirTxt[c.dirs]}</span>${c.div && c.dirs!=="long"?"، شورت با واگراییِ روزانه":""}<br><button class="more" aria-expanded="${open.has(v)}">${open.has(v)?"بستن":"تغییرِ تنظیمات"}</button></div>
+      <button class="dot ${ch?"on":""}" aria-label="برگرداندنِ نسخه‌یِ ${v}"></button>
+      <label class="sw"><input type="checkbox" ${c.on?"checked":""} aria-label="روشن/خاموشِ نسخه‌یِ ${v}"><span></span></label></div>
+      <div class="ver-edit">
+        <div class="line"><span>چرخه</span><div class="seg" data-f="cycle">${[["4h","۴ ساعته"],["1d","روزانه"]].map(([k,t])=>`<button aria-pressed="${c.cycle===k}" data-val="${k}">${t}</button>`).join("")}</div></div>
+        <div class="line"><span>حداقلِ فیلتر</span><div class="seg" data-f="K">${[0,1,2,3].map(k=>`<button aria-pressed="${c.K===k}" data-val="${k}">${k}</button>`).join("")}</div></div>
+        <div class="line"><span>جهت</span><div class="seg" data-f="dirs">${[["both","لانگ + شورت"],["long","فقط لانگ"]].map(([k,t])=>`<button aria-pressed="${c.dirs===k}" data-val="${k}">${t}</button>`).join("")}</div></div>
+        <div class="line"><span>شورت فقط با واگراییِ روزانه</span><label class="sw"><input type="checkbox" data-f="div" ${c.div?"checked":""} aria-label="واگرایی"><span></span></label></div>
+      </div>`;
+    el.querySelector(".ver-head .sw input").onchange = e => { c.on = e.target.checked; update(); };
+    el.querySelector(".more").onclick = () => { el.classList.toggle("open"); renderVersions(); };
+    el.querySelector(".ver-head .dot").onclick = () => { S.versions[v] = clone(BEST.versions[v]); update(); toast(`نسخه‌یِ ${v} برگشت`); };
+    el.querySelectorAll(".ver-edit .seg").forEach(sg => sg.querySelectorAll("button").forEach(b => b.onclick = () => {
+      const f = sg.dataset.f; c[f] = f==="K" ? Number(b.dataset.val) : b.dataset.val; update(); }));
+    el.querySelector('.ver-edit input[data-f="div"]').onchange = e => { c.div = e.target.checked; update(); };
+    box.appendChild(el);
+  }
+}
+
+// ---------------------------------------------------------------- کنترل‌هایِ عمومی
+function renderSegs(){
+  $$("[data-seg]").forEach(sg => { const k = sg.dataset.seg;
+    sg.innerHTML = SEGS[k].map(([v,t]) => `<button aria-pressed="${S[k]===v}" data-val="${v}">${t}</button>`).join("");
+    sg.querySelectorAll("button").forEach(b => b.onclick = () => { S[k] = k==="window" ? Number(b.dataset.val) : b.dataset.val; update(); }); });
+}
+function renderSteppers(){
+  $$("[data-step]").forEach(st => { const k = st.dataset.step, cfg = STEPS[k];
+    st.innerHTML = `<button aria-label="کم کردن">−</button><output aria-live="polite">${cfg.fmt(S[k])}</output><button aria-label="زیاد کردن">+</button>`;
+    const [mi, , pl] = st.children;
+    const set = d => { S[k] = Math.round(Math.min(cfg.max, Math.max(cfg.min, S[k] + d*cfg.inc)) * 100) / 100; update(); };
+    mi.onclick = () => set(-1); pl.onclick = () => set(1); });
+}
+function renderSteps(){
+  const g = $("#stepsGrid"); g.innerHTML = `<div class="h">پله</div><div class="h">هدف (R)</div><div class="h">سهم (٪)</div>`;
+  S.steps.forEach((row, i) => {
+    const mk = (j, inc, mn, mx, fmt) => { const d = document.createElement("div"); d.className = "step";
+      d.innerHTML = `<button aria-label="کم">−</button><output>${fmt(row[j])}</output><button aria-label="زیاد">+</button>`;
+      d.children[0].onclick = () => { row[j] = Math.round(Math.max(mn, row[j]-inc)*10)/10; update(); };
+      d.children[2].onclick = () => { row[j] = Math.round(Math.min(mx, row[j]+inc)*10)/10; update(); }; return d; };
+    const n = document.createElement("div"); n.textContent = ["اول","دوم","سوم"][i]; n.style.fontWeight = "700";
+    g.append(n, mk(0, 0.5, 0.5, 20, v=>v.toFixed(1)+"R"), mk(1, 1, 0, 100, v=>v+"%"));
+  });
+  const sum = S.steps.reduce((a,r)=>a+r[1],0); $("#sumWarn").classList.toggle("show", sum !== 100);
+}
+function renderBools(){ $$("[data-bool]").forEach(i => { const k = i.dataset.bool; i.checked = !!S[k]; i.onchange = () => { S[k] = i.checked; update(); }; }); }
+function renderSymbols(){
+  const ch = $("#chips"); ch.innerHTML = "";
+  S.symbols.forEach((p, i) => { const c = document.createElement("span"); c.className = "chip";
+    c.innerHTML = `<span class="nm">${p[0]}</span><button class="dir ${p[1]}" aria-label="جهتِ ${p[0]}">${dirTxt[p[1]]}</button><button class="x" aria-label="حذفِ ${p[0]}">×</button>`;
+    c.querySelector(".dir").onclick = () => { p[1] = {both:"long",long:"short",short:"both"}[p[1]]; update(); };
+    c.querySelector(".x").onclick = () => { S.symbols.splice(i,1); update(); };
+    ch.appendChild(c); });
+  $("#symBox").hidden = S.sym_mode === "all"; $("#allNote").hidden = S.sym_mode !== "all";
+}
+$("#addSym").onclick = () => { const v = $("#newSym").value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/USDT$/,"");
+  if (!v) return; if (S.symbols.some(p=>p[0]===v)) { toast(`${v} از قبل هست`); return; }
+  S.symbols.push([v,"both"]); $("#newSym").value = ""; update(); };
+$("#newSym").addEventListener("keydown", e => { if (e.key === "Enter") $("#addSym").click(); });
+
+// ---------------------------------------------------------------- حساب
+function renderAccount(){
+  const a = S.account, cap = $("#accCapital"), mar = $("#accMargin");
+  if (document.activeElement !== cap) cap.value = a.capital;
+  if (document.activeElement !== mar) mar.value = a.margin;
+  const st = $('[data-acc="leverage"]');
+  st.innerHTML = `<button aria-label="کم کردن">−</button><output>${a.leverage}×</output><button aria-label="زیاد کردن">+</button>`;
+  st.children[0].onclick = () => { a.leverage = Math.max(1, a.leverage - 1); update(); };
+  st.children[2].onclick = () => { a.leverage = Math.min(125, a.leverage + 1); update(); };
+  $("#accAuto").checked = !!a.auto_lev;
+  $("#accSize").textContent = `$${(a.margin * a.leverage).toLocaleString("en-US")}`;
+  const w = a.margin > a.capital ? "مارجینِ هر معامله از کلِ کیف‌پول بیشتره" :
+            a.margin > a.capital * 0.25 ? `هر معامله ${Math.round(a.margin / a.capital * 100)}٪ کیف‌پول رو قفل می‌کنه` : "";
+  $("#accWarn").hidden = !w; $("#accWarn").textContent = w;
+}
+const numIn = (el, key, min) => el.addEventListener("change", () => {
+  const v = parseFloat(String(el.value).replace(/[^0-9.]/g, ""));
+  if (!isFinite(v) || v < min) { toast("یه عددِ مثبت وارد کن"); el.value = S.account[key]; return; }
+  S.account[key] = Math.round(v * 100) / 100; update(); });
+numIn($("#accCapital"), "capital", 10); numIn($("#accMargin"), "margin", 1);
+$("#accAuto").onchange = e => { S.account.auto_lev = e.target.checked; update(); };
+
+// ---------------------------------------------------------------- نقطه‌ها
+const FIELD = {entry_tf:["entry_tf"], window:["window"], tp:["tp"], sl:["sl"], sl_pad:["sl_pad"], steps:["steps"], move_be:["move_be"],
+  cycle_close:["cycle_close"], max_days:["max_days"], slope:["slope"], ma200:["ma200"], guard:["guard"], drift:["drift"], symbols:["sym_mode","symbols"]};
+function renderDots(){
+  $$(".dot[data-key]").forEach(d => { const ks = FIELD[d.dataset.key]; const ch = ks.some(k => !same(S[k], BEST[k]));
+    d.classList.toggle("on", ch);
+    d.onclick = () => { ks.forEach(k => S[k] = clone(BEST[k])); update(); toast("برگشت به بهترین حالت"); }; });
+  let n = Object.keys(BEST).filter(k => k!=="versions" && k!=="sym_mode" && !same(S[k], BEST[k])).length + (same(S.sym_mode,BEST.sym_mode)?0:1);
+  n += Object.keys(BEST.versions).filter(v => !same(S.versions[v], BEST.versions[v])).length;
+  $("#changedCount").innerHTML = n ? `<b>${n}</b> تغییر نسبت به بهترین حالت` : "رویِ بهترین حالت";
+  $("#resetAll").innerHTML = n ? `بازگشت به بهترین حالت <b>(${n})</b>` : "رویِ بهترین حالت";
+  $("#resetAll").disabled = n === 0;
+}
+
+// ---------------------------------------------------------------- config.json
+function buildConfig(){
+  const cfg = clone(base);
+  cfg.INITIAL_CAPITAL = S.account.capital; cfg.POSITION_MARGIN = S.account.margin; cfg.LEVERAGE = S.account.leverage; cfg.AUTO_LEVERAGE = !!S.account.auto_lev;
+  for (const v of Object.keys(S.versions)) cfg[`TRADING_ENABLED_ANGELA9_${v}`] = S.versions[v].on;
+  const versions = {}; for (const v of Object.keys(S.versions)) { const c = S.versions[v]; versions[v] = {cycle:c.cycle, div:c.div, K:c.K, dirs:c.dirs}; }
+  cfg.PARAMS_ANGELA9 = Object.assign({}, cfg.PARAMS_ANGELA9||{}, {
+    VERSIONS: versions, ENTRY_TF: S.entry_tf, ENTRY_WINDOW_MIN: S.window, EXIT: S.exit,
+    FIXED_TP_PCT: S.tp, FIXED_SL_PCT: S.sl, SL_PAD_PCT: S.sl_pad, STEPS: S.steps.map(r => [r[0], Math.round(r[1])/100]),
+    MOVE_SL_TO_ENTRY_AFTER_FIRST: S.move_be, CLOSE_ON_CYCLE_CHANGE: S.cycle_close, MAX_HOLD_DAYS: S.max_days, SLOPE_BARS: S.slope,
+    MA200_RULES: S.ma200, GUARD_OTHER_STRATEGIES: S.guard, MAX_ENTRY_DRIFT_PCT: S.drift });
+  cfg.SYMBOLS_ANGELA9 = S.sym_mode === "all" ? "*" : Object.fromEntries(S.symbols.map(([s,d]) => [`${s}/USDT:USDT`, d]));
+  return cfg;
+}
+function readConfig(cfg){
+  if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) throw new Error("bad");
+  base = cfg; const n = clone(BEST); const p = cfg.PARAMS_ANGELA9 || {};
+  const num = (k, d) => (cfg[k] != null && isFinite(Number(cfg[k]))) ? Number(cfg[k]) : d;
+  n.account = {capital: num("INITIAL_CAPITAL", ACCOUNT_DEFAULT.capital), margin: num("POSITION_MARGIN", ACCOUNT_DEFAULT.margin),
+               leverage: num("LEVERAGE", ACCOUNT_DEFAULT.leverage), auto_lev: cfg.AUTO_LEVERAGE != null ? !!cfg.AUTO_LEVERAGE : ACCOUNT_DEFAULT.auto_lev};
+  for (const v of Object.keys(n.versions)) {
+    const pv = (p.VERSIONS||{})[v]; if (pv) Object.assign(n.versions[v], {cycle:pv.cycle??n.versions[v].cycle, div:!!(pv.div??n.versions[v].div), K:Number(pv.K??n.versions[v].K), dirs:pv.dirs??n.versions[v].dirs});
+    const k = `TRADING_ENABLED_ANGELA9_${v}`; n.versions[v].on = k in cfg ? !!cfg[k] : false; }
+  const pick = (key, f) => { if (key in p) f(p[key]); };
+  pick("ENTRY_TF", v => n.entry_tf = v); pick("ENTRY_WINDOW_MIN", v => n.window = Number(v)); pick("EXIT", v => n.exit = v);
+  pick("FIXED_PCT", v => { n.tp = Number(v); n.sl = Number(v); }); pick("FIXED_TP_PCT", v => { if (v != null) n.tp = Number(v); }); pick("FIXED_SL_PCT", v => { if (v != null) n.sl = Number(v); });
+  pick("SL_PAD_PCT", v => n.sl_pad = Number(v)); pick("STEPS", v => n.steps = v.slice(0,3).map(r => [Number(r[0]), Math.round(Number(r[1])*100)]));
+  pick("MOVE_SL_TO_ENTRY_AFTER_FIRST", v => n.move_be = !!v); pick("CLOSE_ON_CYCLE_CHANGE", v => n.cycle_close = !!v);
+  pick("MAX_HOLD_DAYS", v => n.max_days = Number(v)); pick("SLOPE_BARS", v => n.slope = Number(v)); pick("MA200_RULES", v => n.ma200 = !!v);
+  pick("GUARD_OTHER_STRATEGIES", v => n.guard = !!v); pick("MAX_ENTRY_DRIFT_PCT", v => n.drift = Number(v));
+  const sy = cfg.SYMBOLS_ANGELA9;
+  if (sy === "*") n.sym_mode = "all";
+  else if (sy && typeof sy === "object") { n.sym_mode = "list"; n.symbols = Object.entries(sy).map(([s,d]) => [s.split("/")[0].toUpperCase(), ["both","long","short"].includes(d)?d:"both"]); }
+  S = n; update();
+}
+$("#fileIn").onchange = async e => { const f = e.target.files[0]; if (!f) return;
+  try { readConfig(JSON.parse(await f.text())); toast("config.json خونده شد"); } catch(err) { toast("این فایل JSONِ درستی نیست"); } e.target.value = ""; };
+$("#loadPaste").onclick = () => { try { readConfig(JSON.parse($("#pasteIn").value)); toast("متن خونده شد"); } catch(err) { toast("این متن JSONِ درستی نیست"); } };
+
+const text = () => JSON.stringify(buildConfig(), null, 2);
+// حالتِ سرور (angela9_config_web.py رویِ VPS): config.jsonِ بات خونده و مستقیم ذخیره میشه
+const TOKEN = new URLSearchParams(location.search).get("t");
+const api = TOKEN ? `/api/config?t=${encodeURIComponent(TOKEN)}` : null;
+if (api) {
+  fetch(api).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(cfg => { readConfig(cfg); toast("config.jsonِ بات خونده شد"); })
+    .catch(() => toast("خوندنِ config.jsonِ بات نشد — لینک یا توکن رو چک کن"));
+  $("#save").textContent = "ذخیره در بات";
+}
+let downloads = null;
+if (window.claude && claude.use) claude.use("downloads").then(d => { downloads = d; }).catch(() => {});
+$("#save").onclick = async () => {
+  if (S.steps.reduce((a,r)=>a+r[1],0) !== 100 && S.exit === "steps") { toast("جمعِ سهمِ پله‌ها باید ۱۰۰٪ باشه"); return; }
+  if (api) {
+    try {
+      const r = await fetch(api, {method: "POST", headers: {"Content-Type": "application/json"}, body: text()});
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ok) { toast("در config.jsonِ بات ذخیره شد (با پشتیبان)"); return; }
+      toast("ذخیره نشد: " + (j.error || r.status)); return;
+    } catch (e) { toast("سرور در دسترس نیست — بات خاموشه یا اینترنت قطعه"); return; }
+  }
+  if (downloads) {
+    try { await downloads.save({filename:"config.json", data:text()}); toast("config.json ذخیره شد"); return; }
+    catch(err) { if (err && err.code === "declined") { toast("ذخیره لغو شد"); return; } }
+  }
+  copyText(); toast("ذخیره اینجا ممکن نیست — متن کپی شد");
+};
+function copyText(){
+  const t = text();
+  if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(()=>toast("کپی شد")).catch(fallback);
+  fallback();
+  function fallback(){ const o = $("#out"); o.closest("details").open = true; o.value = t; o.focus(); o.select();
+    try { document.execCommand("copy"); toast("کپی شد"); } catch(e) { toast("متن رو از پیش‌نمایش انتخاب و کپی کن"); } }
+}
+$("#copy").onclick = copyText;
+$("#resetAll").onclick = () => { const acc = S.account; S = clone(BEST); S.account = acc; update(); toast("همه‌چیز برگشت به بهترین حالت (حساب دست‌نخورده)"); };
+
+function update(){
+  renderAccount(); renderVersions(); renderSegs(); renderSteppers(); renderSteps(); renderBools(); renderSymbols(); renderDots();
+  $("#fixedBox").hidden = S.exit !== "fixed5"; $("#stepsBox").hidden = S.exit !== "steps";
+  $("#winRow").hidden = $("#winSeg").hidden = S.entry_tf === "15m";
+  $("#out").value = text(); persist();
+}
+update();
+})();
+</script>
+</body>
+</html>
