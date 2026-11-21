@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>شاگرد، ربات یادگیرنده‌ی ترید</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEEA; --paper:#F7F9F5; --ink:#1B2632; --muted:#5A6875; --line:#C9D3CD;
+  --grid:rgba(27,38,50,.055); --buy:#1C8656; --buy-soft:#D6EEE2; --sell:#BF3B33; --sell-soft:#F6DEDB;
+  --mark:#C98A12; --mark-soft:#F6E8C8; --focus:#2C6BAE; --ondark:#F7F9F5;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F151C; --paper:#17202A; --ink:#E3E8E2; --muted:#93A1AD; --line:#2B3845;
+    --grid:rgba(227,232,226,.045); --buy:#3DBE84; --buy-soft:#173628; --sell:#EE6B61; --sell-soft:#3A1E1C;
+    --mark:#E7B243; --mark-soft:#3A2E14; --focus:#6AA7E8; --ondark:#0F151C;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F151C; --paper:#17202A; --ink:#E3E8E2; --muted:#93A1AD; --line:#2B3845;
+  --grid:rgba(227,232,226,.045); --buy:#3DBE84; --buy-soft:#173628; --sell:#EE6B61; --sell-soft:#3A1E1C;
+  --mark:#E7B243; --mark-soft:#3A2E14; --focus:#6AA7E8; --ondark:#0F151C;
+  color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Vazirmatn",Tahoma,"Segoe UI",system-ui,sans-serif;font-size:16px;line-height:1.75;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom,0px));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:12px;padding-top:10px;padding-bottom:10px}
+.brand{font-weight:800;font-size:1.35rem;letter-spacing:-.01em}
+.brand small{display:block;font-weight:500;font-size:.78rem;color:var(--muted);line-height:1.3}
+.conn{margin-inline-start:auto;font-size:.8rem;color:var(--muted);text-align:left}
+.conn b{font-weight:700}
+section.tab{display:none;padding:18px 0 8px}
+section.tab.on{display:block}
+h2{font-size:1.2rem;margin:0 0 6px;font-weight:800}
+h3{font-size:1.02rem;margin:4px 0 2px;font-weight:700}
+p{margin:6px 0}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+label.f{display:block;font-size:.86rem;color:var(--muted);margin:10px 0 4px}
+input[type=text],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+textarea{min-height:70px;resize:vertical}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:10px 16px;font-weight:700}
+.btn.primary{background:var(--ink);color:var(--ondark);border-color:var(--ink)}
+.btn.go{background:var(--buy);color:#fff;border-color:var(--buy)}
+.btn.stop{background:var(--sell);color:#fff;border-color:var(--sell)}
+.btn.mark{background:var(--mark);color:#1E1503;border-color:var(--mark)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.wide{flex:1 1 auto}
+/* viewfinder */
+.finder{position:relative;border-radius:16px;overflow:hidden;background:#0B1016;aspect-ratio:4/3;margin-top:12px}
+.finder video{width:100%;height:100%;object-fit:cover;display:block}
+.finder .idle{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#AEB9C3;padding:24px;font-size:.95rem}
+.finder .corner{position:absolute;width:26px;height:26px;border-color:rgba(255,255,255,.75);border-style:solid;border-width:0}
+.finder .c1{top:12px;right:12px;border-top-width:3px;border-right-width:3px;border-top-right-radius:6px}
+.finder .c2{top:12px;left:12px;border-top-width:3px;border-left-width:3px;border-top-left-radius:6px}
+.finder .c3{bottom:12px;right:12px;border-bottom-width:3px;border-right-width:3px;border-bottom-right-radius:6px}
+.finder .c4{bottom:12px;left:12px;border-bottom-width:3px;border-left-width:3px;border-bottom-left-radius:6px}
+.finder .rec{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(11,16,22,.7);color:#fff;border-radius:99px;padding:2px 12px;font-size:.85rem;display:none;align-items:center;gap:6px;direction:ltr}
+.finder .rec i{width:9px;height:9px;border-radius:50%;background:#EE4B40;display:inline-block}
+.finder.live .rec{display:flex}
+.finder .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+.finder .flash.go{opacity:.55;transition:none}
+@media (prefers-reduced-motion: reduce){.finder .flash{transition:none}}
+.status{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.status div{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:.78rem;line-height:1.4}
+.status b{display:block;font-size:1rem}
+.ok{color:var(--buy)} .bad{color:var(--sell)} .warnc{color:var(--mark)}
+.strip{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px}
+.strip img{height:54px;border-radius:6px;border:2px solid transparent;flex:none}
+.strip img.m{border-color:var(--mark)}
+.transcript{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;max-height:160px;overflow-y:auto;font-size:.9rem}
+.transcript .interim{color:var(--muted)}
+.notice{border-inline-start:4px solid var(--mark);background:var(--mark-soft);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:.9rem}
+.notice.red{border-color:var(--sell);background:var(--sell-soft)}
+.notice.green{border-color:var(--buy);background:var(--buy-soft)}
+.progress{font-size:.9rem;white-space:pre-wrap;max-height:120px;overflow:auto;color:var(--muted)}
+/* candles readiness */
+.candles{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;align-items:end;margin:8px 0 2px}
+.candle{display:flex;flex-direction:column;align-items:center;gap:4px}
+.candle svg{width:100%;max-width:34px;height:70px;overflow:visible}
+.candle span{font-size:.7rem;color:var(--muted);line-height:1.2;text-align:center}
+.candle.req span{color:var(--ink);font-weight:700}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:14px;border-radius:2px;margin-inline-end:5px;vertical-align:-2px}
+/* rules */
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
+.chip{flex:none;border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:4px 12px;font-size:.85rem}
+.chip.on{background:var(--ink);color:var(--ondark);border-color:var(--ink)}
+.rule{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:10px 0;border-inline-start-width:5px}
+.rule.s-confirmed{border-inline-start-color:var(--buy)}
+.rule.s-pending{border-inline-start-color:var(--mark)}
+.rule.s-rejected{border-inline-start-color:var(--line);opacity:.7}
+.rule.s-no_evidence{border-inline-start-color:var(--sell)}
+.rule .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.8rem}
+.rid{direction:ltr;font-weight:800;background:var(--bg);border-radius:6px;padding:0 6px}
+.tag{border-radius:6px;padding:0 7px;background:var(--bg);color:var(--muted)}
+.st{margin-inline-start:auto;font-weight:700}
+.params{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.params code{direction:ltr;font-family:inherit;font-size:.82rem;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 7px}
+.meta{font-size:.8rem;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+details{margin-top:8px}
+summary{cursor:pointer;font-size:.88rem;font-weight:700}
+.ev{border-top:1px dashed var(--line);padding:7px 0;font-size:.88rem}
+.ev .v{font-weight:700;font-size:.78rem}
+.ev img{max-width:100%;border-radius:8px;margin-top:4px;display:block}
+.cite{direction:ltr;display:inline-block;font-weight:700;border-radius:5px;padding:0 4px;font-size:.82rem}
+.cite.ok{background:var(--buy-soft);color:var(--buy)}
+.cite.bad{background:var(--sell-soft);color:var(--sell)}
+.answer{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:60px}
+.seg{border-top:1px solid var(--line);padding:10px 0}
+.seg:first-child{border-top:0}
+ul.plain{margin:4px 0;padding-inline-start:20px}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:6;background:var(--paper);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs button{background:none;border:0;padding:10px 0 12px;font-weight:700;font-size:.92rem;color:var(--muted);position:relative}
+nav.tabs button.on{color:var(--ink)}
+nav.tabs button.on::after{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--buy)}
+nav.tabs .badge{display:inline-block;min-width:18px;border-radius:9px;background:var(--mark);color:#1E1503;font-size:.7rem;line-height:18px;margin-inline-start:4px;padding:0 4px}
+.hidden{display:none!important}
+pre.json{direction:ltr;text-align:left;font-size:.75rem;max-height:220px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;white-space:pre-wrap;word-break:break-all}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="brand">شاگرد<small>ربات یادگیرنده‌ی ترید</small></div>
+  <div class="conn" id="conn">در حال اتصال…</div>
+</div></header>
+
+<main class="wrap">
+
+<!-- CLASS -->
+<section class="tab on" id="t-class">
+  <h2>کلاس زنده</h2>
+  <p class="muted small">دوربین آیفون رو روبه‌روی صفحه‌ی سامسونگ بگیر. شاگرد هر وقت تصویر صفحه عوض بشه یه عکس برمی‌داره و حرف‌های مدرس رو می‌نویسه. هر چند دقیقه «یاد بگیر» رو بزن تا اون بخش رو بفهمه و توی دفترچه‌ی دانش بنویسه.</p>
+
+  <label class="f" for="lesson">اسم جلسه</label>
+  <input type="text" id="lesson" placeholder="مثلاً جلسه ۳، ورود با فیبوناچی">
+  <div class="row" style="margin-top:8px">
+    <label class="small muted" for="lang">زبان مدرس</label>
+    <select id="lang" style="width:auto">
+      <option value="fa-IR">فارسی</option>
+      <option value="en-US">انگلیسی</option>
+      <option value="ar-IQ">عربی</option>
+    </select>
+  </div>
+
+  <div class="finder" id="finder">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="idle" id="idle">دوربین خاموشه.<br>«شروع کلاس» رو بزن.</div>
+    <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+    <div class="rec"><i></i><span id="clock">00:00</span></div>
+    <div class="flash" id="flash"></div>
+  </div>
+
+  <div class="status">
+    <div>دوربین<b id="s-cam" class="muted">خاموش</b></div>
+    <div>شنیدن<b id="s-mic" class="muted">خاموش</b></div>
+    <div>عکس‌ها<b id="s-frames">۰</b></div>
+    <div>کلمه‌ها<b id="s-words">۰</b></div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <button class="btn go wide" id="b-start">شروع کلاس</button>
+    <button class="btn stop wide hidden" id="b-stop">توقف کلاس</button>
+    <button class="btn mark" id="b-snap" disabled>لحظه‌ی مهم</button>
+  </div>
+
+  <div id="cam-fallback" class="notice hidden">
+    دوربین زنده اینجا باز نشد. می‌تونی به‌جاش از صفحه عکس بگیری:
+    <div class="row" style="margin-top:8px">
+      <label class="btn mark" for="photo">عکس گرفتن از صفحه</label>
+      <input type="file" id="photo" accept="image/*" capture="environment" multiple class="hidden">
+    </div>
+  </div>
+  <div id="mic-note" class="notice hidden"></div>
+
+  <div class="strip" id="strip"></div>
+
+  <label class="f">حرف‌های مدرس (زنده)</label>
+  <div class="transcript" id="transcript"><span class="muted">هنوز چیزی شنیده نشده.</span></div>
+
+  <label class="f" for="notes">یادداشت تو (اختیاری، مثلاً عددی که روی چارت نوشته)</label>
+  <textarea id="notes" placeholder="اگه شنیدن کار نکرد، می‌تونی با میکروفون کیبورد آیفون اینجا بگی."></textarea>
+
+  <div class="row" style="margin-top:12px">
+    <button class="btn primary wide" id="b-learn">یاد بگیر از این بخش</button>
+    <button class="btn hidden" id="b-cancel">لغو</button>
+  </div>
+  <div id="learn-msg"></div>
+  <div class="progress" id="learn-progress"></div>
+</section>
+
+<!-- KNOWLEDGE -->
+<section class="tab" id="t-know">
+  <h2>دفترچه‌ی دانش</h2>
+  <div class="card">
+    <h3>آمادگی برای بک‌تست</h3>
+    <div class="candles" id="candles"></div>
+    <div class="legend">
+      <span><i style="background:var(--buy)"></i>تأیید تو</span>
+      <span><i style="border:2px solid var(--mark)"></i>منتظر تأیید</span>
+      <span><i style="background:var(--line)"></i>یاد نگرفته</span>
+    </div>
+    <p id="ready-text" class="small" style="margin-top:8px"></p>
+  </div>
+
+  <p class="small muted">هر قانون باید مدرک داشته باشه: جمله‌ای که دقیقاً توی حرف‌های مدرس پیدا بشه، یا عکسی از صفحه. قانونِ بی‌مدرک قابل تأیید نیست. فقط قانون‌هایی که <b>تو</b> تأیید کنی وارد بک‌تست می‌شن.</p>
+  <div class="chips" id="filters"></div>
+  <div id="rules"></div>
+
+  <div class="card">
+    <h3>جلسه‌های یادگرفته‌شده</h3>
+    <div id="segments"><p class="muted small">هنوز هیچ بخشی یاد گرفته نشده.</p></div>
+  </div>
+</section>
+
+<!-- EXAM -->
+<section class="tab" id="t-exam">
+  <h2>آزمون شاگرد</h2>
+  <p class="muted small">اینجا امتحانش کن. شاگرد فقط از قانون‌های دفترچه جواب می‌ده و کنار هر جمله شماره‌ی قانون رو می‌نویسه. شماره‌ی سبز یعنی اون قانون واقعاً وجود داره؛ قرمز یعنی از خودش ساخته. اگه چیزی رو یاد نگرفته باشه باید بگه «این رو یاد نگرفتم».</p>
+  <div class="row">
+    <button class="btn primary wide" id="b-teach">استراتژی رو کامل برام توضیح بده</button>
+  </div>
+  <label class="f" for="q">یا یه سؤال بپرس</label>
+  <textarea id="q" placeholder="مثلاً: حد ضرر رو کجا می‌ذاری؟ اگه قیمت زیر MA200 باشه خرید می‌کنی؟"></textarea>
+  <div class="row" style="margin-top:8px">
+    <button class="btn wide" id="b-ask">بپرس</button>
+    <button class="btn hidden" id="b-exstop">توقف</button>
+  </div>
+  <label class="f">جواب شاگرد</label>
+  <div class="answer" id="answer"><span class="muted">جوابی هنوز نیست.</span></div>
+  <p id="cite-check" class="small"></p>
+</section>
+
+<!-- EXPORT -->
+<section class="tab" id="t-out">
+  <h2>خروجی برای کولب</h2>
+  <div class="card">
+    <p id="out-ready"></p>
+    <p class="small muted">فایل دانش فقط قانون‌های تأییدشده و قابل‌کدنویسی رو داره. همین فایل رو توی کولب آپلود می‌کنی تا بک‌تست ۶ ساله اجرا بشه.</p>
+    <div class="row"><button class="btn go wide" id="b-export">دانلود فایل دانش</button></div>
+    <div id="out-msg"></div>
+    <pre class="json hidden" id="out-json"></pre>
+  </div>
+  <div class="card">
+    <h3>پاک‌سازی</h3>
+    <p class="small muted">عکس‌های مدرک فقط برای اینه که قانون‌ها رو بررسی کنی. بعد از تأیید می‌تونی پاکشون کنی؛ قانون‌ها می‌مونن.</p>
+    <div class="row">
+      <button class="btn" id="b-delimg">پاک کردن عکس‌های مدرک</button>
+      <button class="btn stop" id="b-reset">پاک کردن کل دانش</button>
+    </div>
+    <div id="clean-msg"></div>
+  </div>
+</section>
+</main>
+
+<nav class="tabs"><div class="wrap">
+  <button data-tab="class" class="on">کلاس</button>
+  <button data-tab="know">دانش<span class="badge hidden" id="badge"></span></button>
+  <button data-tab="exam">آزمون</button>
+  <button data-tab="out">خروجی</button>
+</div></nav>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fa = n => Number(n).toLocaleString("fa-IR");
+const mmss = s => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0"); };
+
+const CATS = {market:"بازار و نماد",timeframe:"تایم‌فریم",entry_long:"ورود خرید",entry_short:"ورود فروش",stop_loss:"حد ضرر",take_profit:"خروج و تارگت",risk:"مدیریت ریسک",filter:"فیلتر و شرط",indicator:"تنظیم اندیکاتور",concept:"مفهوم",other:"سایر"};
+const SHORT = {market:"بازار",timeframe:"تایم",entry_long:"خرید",entry_short:"فروش",stop_loss:"ضرر",take_profit:"تارگت",risk:"ریسک",filter:"فیلتر"};
+const CANDLES = ["market","timeframe","entry_long","entry_short","stop_loss","take_profit","risk","filter"];
+const REQ = ["timeframe","entry","stop_loss","take_profit"];
+const STATUS = {pending:"منتظر تأیید",confirmed:"تأییدشده",rejected:"ردشده",no_evidence:"بی‌مدرک"};
+
+const S = {
+  db:null, uid:null, sample:null, downloads:null, limits:null,
+  base:null, rulesCol:null, segCol:null, framesCol:null,
+  rules:[], segments:[], meta:{exportVersion:0}, loaded:false,
+  stream:null, live:false, t0:0, tick:null, lastSig:null, lastKeyAt:-999, nf:0,
+  frames:[], transcript:[], interim:"", micState:"off", sr:null, srWanted:false, wake:null,
+  learning:null, examCtl:null, filter:"all", thumbs:new Map(), resetArmed:0
+};
+
+/* ---------- connect ---------- */
+(async function init(){
+  const use = n => (window.claude && window.claude.use) ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+  const [db, user, sample, downloads] = await Promise.all(["db","user","sample","downloads"].map(use));
+  S.sample = sample; S.downloads = downloads;
+  if (sample) S.limits = await sample.limits().catch(() => null);
+  const uid = user ? await user.id().catch(() => null) : null;
+  const parts = [];
+  if (db && uid) {
+    S.db = db; S.uid = uid;
+    S.base = db.doc("data/users/" + uid + "/brain");
+    S.rulesCol = S.base.collection("rules");
+    S.segCol = S.base.collection("segments");
+    S.framesCol = S.base.collection("frames");
+    const timer = setTimeout(() => { if (!S.loaded) $("#conn").innerHTML = '<b class="warnc">دفترچه هنوز نرسیده</b>'; }, 10000);
+    S.base.onSnapshot(s => { S.meta = s.exists ? s.data() : {exportVersion:0}; renderOut(); }, () => {});
+    S.rulesCol.onSnapshot(q => {
+      S.loaded = true; clearTimeout(timer);
+      S.rules = q.docs.map(d => ({...d.data(), id:d.id}));
+      renderKnow(); renderOut(); renderConn();
+    }, () => { $("#conn").innerHTML = '<b class="bad">دفترچه قطع شد</b>'; });
+    S.segCol.onSnapshot(q => { S.segments = q.docs.map(d => ({...d.data(), id:d.id})).sort((a,b) => (b.at||0)-(a.at||0)); renderSegments(); }, () => {});
+  } else parts.push("ذخیره‌سازی");
+  if (!sample) parts.push("هوش مصنوعی");
+  if (parts.length) $("#conn").innerHTML = '<b class="bad">در دسترس نیست: ' + parts.join("، ") + "</b><br>این صفحه رو داخل اپ Claude باز کن.";
+  else renderConn();
+  if (!S.limits || !S.limits.images) {
+    const n = $("#mic-note");
+    if (sample) { n.classList.remove("hidden"); n.textContent = "فرستادن عکس به هوش مصنوعی اینجا در دسترس نیست؛ شاگرد فقط از حرف‌های مدرس یاد می‌گیره."; }
+  }
+  renderKnow(); renderOut();
+})();
+
+function renderConn(){
+  if (!S.db || !S.sample) return;
+  const c = S.rules.filter(r => r.status === "confirmed").length;
+  $("#conn").innerHTML = "<b>" + fa(S.rules.length) + "</b> قانون، <b>" + fa(c) + "</b> تأییدشده";
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav.tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("section.tab").forEach(s => s.classList.toggle("on", s.id === "t-" + b.dataset.tab));
+  window.scrollTo(0, 0);
+}));
+
+/* ---------- camera + listening ---------- */
+const video = $("#video");
+const sigCanvas = document.createElement("canvas"); sigCanvas.width = 64; sigCanvas.height = 36;
+const sigCtx = sigCanvas.getContext("2d", {willReadFrequently:true});
+const elapsed = () => (performance.now() - S.t0) / 1000;
+
+$("#b-start").addEventListener("click", startClass);
+$("#b-stop").addEventListener("click", stopClass);
+$("#b-snap").addEventListener("click", () => captureFrame(true));
+$("#photo").addEventListener("change", async e => {
+  for (const f of e.target.files) {
+    const blob = await resizeBlob(f, 1280, .82).catch(() => null);
+    if (blob) addFrame(blob, true);
+  }
+  e.target.value = "";
+});
+
+async function startClass(){
+  S.t0 = performance.now(); S.live = true; S.lastSig = null; S.lastKeyAt = -999;
+  $("#b-start").classList.add("hidden"); $("#b-stop").classList.remove("hidden");
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no media");
+    S.stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}}, audio:false});
+    video.srcObject = S.stream; await video.play().catch(() => {});
+    $("#idle").classList.add("hidden"); $("#finder").classList.add("live");
+    setStat("#s-cam", "روشن", "ok"); $("#b-snap").disabled = false;
+    $("#cam-fallback").classList.add("hidden");
+    S.tick = setInterval(watch, 1500);
+  } catch (e) {
+    setStat("#s-cam", "باز نشد", "bad");
+    $("#cam-fallback").classList.remove("hidden");
+    $("#idle").innerHTML = "دوربین زنده در دسترس نیست.<br>از دکمه‌ی «عکس گرفتن از صفحه» استفاده کن.";
+  }
+  startListening();
+  try { if (navigator.wakeLock) S.wake = await navigator.wakeLock.request("screen"); } catch (e) {}
+  clockLoop();
+}
+function stopClass(){
+  S.live = false; clearInterval(S.tick);
+  if (S.stream) S.stream.getTracks().forEach(t => t.stop());
+  S.stream = null; video.srcObject = null;
+  $("#finder").classList.remove("live"); $("#idle").classList.remove("hidden");
+  $("#idle").innerHTML = "کلاس متوقف شد.<br>برای ادامه «شروع کلاس» رو بزن.";
+  $("#b-start").classList.remove("hidden"); $("#b-stop").classList.add("hidden");
+  $("#b-snap").disabled = true; setStat("#s-cam", "خاموش", "muted");
+  S.srWanted = false; try { S.sr && S.sr.stop(); } catch (e) {}
+  if (S.micState === "on") { S.micState = "off"; setStat("#s-mic", "خاموش", "muted"); }
+  try { S.wake && S.wake.release(); } catch (e) {} S.wake = null;
+}
+function clockLoop(){ if (!S.live) return; $("#clock").textContent = mmss(elapsed()); setTimeout(clockLoop, 500); }
+function setStat(sel, txt, cls){ const el = $(sel); el.textContent = txt; el.className = cls; }
+
+function signature(){
+  sigCtx.drawImage(video, 0, 0, 64, 36);
+  const d = sigCtx.getImageData(0, 0, 64, 36).data, g = new Uint8Array(64*36);
+  for (let i = 0, j = 0; i < d.length; i += 4, j++) g[j] = (d[i]*.3 + d[i+1]*.59 + d[i+2]*.11) | 0;
+  return g;
+}
+function watch(){
+  if (!S.live || !video.videoWidth) return;
+  const sig = signature(), t = elapsed();
+  if (!S.lastSig) { S.lastSig = sig; captureFrame(false); return; }
+  let diff = 0; for (let i = 0; i < sig.length; i++) diff += Math.abs(sig[i] - S.lastSig[i]);
+  diff /= sig.length;
+  const since = t - S.lastKeyAt;
+  if ((diff > 11 && since > 6) || since > 90) { S.lastSig = sig; captureFrame(false); }
+}
+function captureFrame(manual){
+  if (!video.videoWidth) return;
+  const w = Math.min(1280, video.videoWidth), h = Math.round(w * video.videoHeight / video.videoWidth);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  c.getContext("2d").drawImage(video, 0, 0, w, h);
+  c.toBlob(b => { if (b) addFrame(b, manual); }, "image/jpeg", .82);
+  if (manual) { const f = $("#flash"); f.classList.add("go"); setTimeout(() => f.classList.remove("go"), 60); }
+}
+function addFrame(blob, manual){
+  const t = S.live ? elapsed() : 0;
+  S.lastKeyAt = t;
+  S.frames.push({id:"f" + (++S.nf), t, blob, manual, url:URL.createObjectURL(blob)});
+  // keep memory bounded: thin out automatic frames
+  if (S.frames.length > 48) {
+    const autos = S.frames.filter(f => !f.manual);
+    const drop = autos.filter((f, i) => i % 2 === 1).slice(0, S.frames.length - 36);
+    drop.forEach(f => URL.revokeObjectURL(f.url));
+    S.frames = S.frames.filter(f => !drop.includes(f));
+  }
+  renderStrip();
+}
+function renderStrip(){
+  $("#s-frames").textContent = fa(S.frames.length);
+  $("#strip").innerHTML = S.frames.slice(-14).map(f => '<img src="' + f.url + '" alt="عکس ' + esc(mmss(f.t)) + '" class="' + (f.manual ? "m" : "") + '">').join("");
+  const st = $("#strip"); st.scrollLeft = -st.scrollWidth;
+}
+
+function startListening(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const note = $("#mic-note");
+  if (!SR) {
+    S.micState = "none"; setStat("#s-mic", "پشتیبانی نمی‌شه", "bad");
+    note.classList.remove("hidden");
+    note.textContent = "شنیدن خودکار روی این دستگاه کار نمی‌کنه. شاگرد از عکس‌ها یاد می‌گیره؛ نکته‌های گفتاری مهم رو توی «یادداشت تو» بنویس یا با میکروفون کیبورد بگو.";
+    return;
+  }
+  const r = new SR(); S.sr = r;
+  r.lang = $("#lang").value; r.continuous = true; r.interimResults = true;
+  r.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i], txt = res[0].transcript.trim();
+      if (!txt) continue;
+      if (res.isFinal) S.transcript.push({t:elapsed(), text:txt}); else interim += txt + " ";
+    }
+    S.interim = interim; renderTranscript();
+  };
+  r.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      S.srWanted = false; S.micState = "denied"; setStat("#s-mic", "اجازه نداره", "bad");
+      note.classList.remove("hidden");
+      note.textContent = "اجازه‌ی میکروفون داده نشد. شاگرد فقط از عکس‌ها و یادداشت تو یاد می‌گیره.";
+    }
+  };
+  r.onend = () => { if (S.srWanted) setTimeout(() => { try { r.start(); } catch (e) {} }, 250); };
+  S.srWanted = true;
+  try { r.start(); S.micState = "on"; setStat("#s-mic", "روشن", "ok"); }
+  catch (e) { S.micState = "none"; setStat("#s-mic", "باز نشد", "bad"); }
+}
+function renderTranscript(){
+  const words = S.transcript.reduce((n, x) => n + x.text.split(/\s+/).length, 0);
+  $("#s-words").textContent = fa(words);
+  const box = $("#transcript");
+  if (!S.transcript.length && !S.interim) { box.innerHTML = '<span class="muted">هنوز چیزی شنیده نشده.</span>'; return; }
+  box.innerHTML = S.transcript.slice(-30).map(x => '<div><span class="muted small">' + mmss(x.t) + "</span> " + esc(x.text) + "</div>").join("")
+    + (S.interim ? '<div class="interim">' + esc(S.interim) + "</div>" : "");
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ---------- evidence checking (the anti-bluff core) ---------- */
+function norm(s){
+  return String(s || "")
+    .replace(/\[\d{1,3}:\d{2}\]/g, " ")
+    .replace(/[يى]/g, "ی").replace(/ك/g, "ک").replace(/[ۀة]/g, "ه").replace(/[أإآ]/g, "ا").replace(/ؤ/g, "و")
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+    .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/[\u200c\u200d\u200e\u200f]/g, " ")
+    .replace(/[.,!?؟،؛:;"'«»()\[\]{}\-–—…*\/\\]/g, " ")
+    .toLowerCase().replace(/\s+/g, " ").trim();
+}
+function quoteFound(quote, haystackNorm){
+  const q = norm(quote);
+  if (q.split(" ").length < 3) return false;
+  return haystackNorm.includes(q);
+}
+
+/* ---------- learning ---------- */
+$("#b-learn").addEventListener("click", learn);
+$("#b-cancel").addEventListener("click", () => S.learning && S.learning.abort());
+
+function pickFrames(max){
+  if (!max) return [];
+  const manual = S.frames.filter(f => f.manual), auto = S.frames.filter(f => !f.manual);
+  const out = manual.slice(-max);
+  const room = max - out.length;
+  if (room > 0 && auto.length) {
+    if (auto.length <= room) out.push(...auto);
+    else for (let i = 0; i < room; i++) out.push(auto[Math.round(i * (auto.length - 1) / Math.max(1, room - 1))]);
+  }
+  return [...new Set(out)].sort((a, b) => a.t - b.t);
+}
+
+function buildPrompt(transcriptText, notes, frames){
+  const known = S.rules.filter(r => r.status !== "rejected").slice(-120)
+    .map(r => r.id + " | " + r.category + " | " + (r.title || "") + " | " + (r.rule || "")).join("\n") || "(empty)";
+  const frameList = frames.length ? frames.map((f, i) => "Image " + i + ": captured at " + mmss(f.t) + (f.manual ? " (student marked IMPORTANT)" : "")).join("\n") : "(no images)";
+  return `You are the learning engine of "Shagerd", an apprentice bot that attends a trading course through an iPhone camera pointed at another phone's screen. You receive: (1) a speech-recognition transcript of the instructor (it may contain recognition mistakes; timestamps are [mm:ss]); (2) camera images of the screen (glare, angle and partial views are normal); (3) the student's own typed notes; (4) the rules already in the knowledge base.
+
+TASK: extract ONLY what the instructor actually taught in THIS material, as precise trading knowledge that a backtest could use.
+
+STRICT HONESTY RULES — a checker will verify you:
+- Never invent rules, numbers, timeframes or indicator settings that are not said or clearly visible. If something is unclear, cut off, or you are guessing, put it in "unclear" instead of "items".
+- Every item needs at least one piece of evidence:
+  * kind "quote": copy EXACTLY, character for character, a contiguous piece (4-25 words) of the transcript. No paraphrase, no translation, no added words, no timestamps. Quotes that do not appear verbatim are automatically rejected.
+  * kind "frame": "index" = the 0-based image number, "what" = what is concretely visible there (in Persian).
+  * kind "note": exact copy from the student's notes.
+- If the material has no teachable trading content (greetings, ads, chatter), return an empty items list.
+- measurable = true only if the rule can be coded from OHLCV candles and standard indicators with no human judgement; otherwise false with the reason in why_not_measurable.
+- Compare with existing rules: if an item repeats one, use type "reinforce" with its target_id; if it contradicts one, type "conflict" with its target_id; otherwise type "new" with target_id null.
+- confidence: 0..1, how sure you are that the instructor meant exactly this.
+
+Categories: market, timeframe, entry_long, entry_short, stop_loss, take_profit, risk, filter, indicator, concept, other.
+Write title, rule, why_not_measurable, what, unclear and lesson_summary in Persian. "params" holds the concrete stated numbers/settings with English snake_case keys (e.g. {"rsi_period":14,"rsi_below":30}); {} when none.
+
+Reply with only this JSON:
+{"lesson_summary":"...","audio_quality":"good|poor|none","visual_quality":"good|poor|none","items":[{"type":"new","target_id":null,"category":"entry_long","title":"...","rule":"...","params":{},"measurable":true,"why_not_measurable":"","evidence":[{"kind":"quote","text":"..."},{"kind":"frame","index":0,"what":"..."}],"confidence":0.8}],"unclear":["..."]}
+
+=== EXISTING RULES (id | category | title | rule) ===
+${known}
+
+=== IMAGES ===
+${frameList}
+
+=== TRANSCRIPT ===
+${transcriptText || "(no audio transcript)"}
+
+=== STUDENT NOTES ===
+${notes || "(none)"}`;
+}
+
+async function learn(){
+  const msg = $("#learn-msg"), prog = $("#learn-progress");
+  msg.innerHTML = ""; prog.textContent = "";
+  if (!S.sample) { msg.innerHTML = '<div class="notice red">هوش مصنوعی در دسترس نیست. این صفحه رو داخل اپ Claude باز کن.</div>'; return; }
+  if (!S.db) { msg.innerHTML = '<div class="notice red">دفترچه‌ی دانش در دسترس نیست، پس چیزی ذخیره نمی‌شه.</div>'; return; }
+  const lesson = $("#lesson").value.trim();
+  if (!lesson) { msg.innerHTML = '<div class="notice">اول اسم جلسه رو بنویس.</div>'; $("#lesson").focus(); return; }
+  const notes = $("#notes").value.trim();
+  if (!S.frames.length && !S.transcript.length && !notes) { msg.innerHTML = '<div class="notice">هنوز چیزی برای یاد گرفتن نیست. کلاس رو شروع کن.</div>'; return; }
+
+  const maxImg = Math.min(20, (S.limits && S.limits.images && S.limits.images.maxCount) || 0);
+  const takenFrames = S.frames.slice(), takenTr = S.transcript.slice();
+  const frames = pickFrames(maxImg);
+  const transcriptText = takenTr.map(x => "[" + mmss(x.t) + "] " + x.text).join("\n").slice(-60000);
+  const trNorm = norm(takenTr.map(x => x.text).join(" ")), notesNorm = norm(notes);
+  const prompt = buildPrompt(transcriptText, notes, frames);
+
+  // take the buffer now so the class can keep running
+  S.frames = []; S.transcript = []; S.interim = ""; renderStrip(); renderTranscript();
+  const restore = () => { S.frames = takenFrames.concat(S.frames); S.transcript = takenTr.concat(S.transcript); renderStrip(); renderTranscript(); };
+
+  const ctl = new AbortController(); S.learning = ctl;
+  $("#b-learn").disabled = true; $("#b-cancel").classList.remove("hidden");
+  prog.textContent = "شاگرد داره فکر می‌کنه… (" + fa(frames.length) + " عکس، " + fa(takenTr.length) + " جمله)";
+  let out;
+  try {
+    out = await S.sample.json(prompt, {
+      images: frames.length ? frames.map(f => f.blob) : undefined,
+      modelTier: "complex", cache: false, signal: ctl.signal,
+      onText: ({text}) => { prog.textContent = "در حال نوشتن…\n" + text.slice(-400); }
+    });
+  } catch (e) {
+    restore();
+    prog.textContent = "";
+    msg.innerHTML = '<div class="notice red">' + esc(errText(e)) + " عکس‌ها و حرف‌ها نگه داشته شدن؛ دوباره «یاد بگیر» رو بزن.</div>";
+    finishLearn(); return;
+  }
+  try {
+    const report = await saveLesson(out, {lesson, frames, trNorm, notesNorm, transcriptText, notes, audio:S.micState});
+    takenFrames.forEach(f => URL.revokeObjectURL(f.url));
+    $("#notes").value = "";
+    prog.textContent = "";
+    msg.innerHTML = '<div class="notice green">' + report + "</div>";
+  } catch (e) {
+    restore();
+    msg.innerHTML = '<div class="notice red">ذخیره نشد (' + esc(e && e.code || "خطا") + "). دوباره امتحان کن.</div>";
+  }
+  finishLearn();
+}
+function finishLearn(){ S.learning = null; $("#b-learn").disabled = false; $("#b-cancel").classList.add("hidden"); }
+function errText(e){
+  const c = e && e.code;
+  return ({cancelled:"لغو شد.", not_granted:"اجازه‌ی استفاده از Claude داده نشد.", rate_limited:"الان سقف استفاده پر شده؛ کمی بعد دوباره امتحان کن.",
+    invalid_json:"جواب هوش مصنوعی قابل خوندن نبود.", image_rejected:"یکی از عکس‌ها قابل فرستادن نبود.", prompt_too_large:"این بخش خیلی طولانی بود؛ بخش‌های کوتاه‌تر یاد بده.",
+    refused:"هوش مصنوعی این بخش رو پردازش نکرد.", session_expired:"باید دوباره وارد حسابت بشی."})[c] || "ارتباط با هوش مصنوعی برقرار نشد.";
+}
+
+function newId(){
+  const have = new Set(S.rules.map(r => r.id));
+  let id; do { id = "R" + Math.random().toString(36).slice(2, 6).padEnd(4, "0"); } while (have.has(id));
+  have.add(id); return id;
+}
+async function makeThumb(blob){
+  const b = await resizeBlob(blob, 520, .62);
+  return await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
+}
+function resizeBlob(blob, maxW, q){
+  return new Promise((res, rej) => {
+    const img = new Image(), u = URL.createObjectURL(blob);
+    img.onload = () => {
+      const w = Math.min(maxW, img.naturalWidth), h = Math.round(w * img.naturalHeight / img.naturalWidth);
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h); URL.revokeObjectURL(u);
+      c.toBlob(b => b ? res(b) : rej(new Error("blob")), "image/jpeg", q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); rej(new Error("img")); };
+    img.src = u;
+  });
+}
+
+async function saveLesson(out, ctx){
+  const segId = "s" + Date.now().toString(36);
+  const items = Array.isArray(out && out.items) ? out.items : [];
+  const usedFrames = new Map();
+  let nNew = 0, nRe = 0, nConf = 0, nBluff = 0, nRejectedQuotes = 0;
+  const byId = new Map(S.rules.map(r => [r.id, r]));
+
+  for (const it of items) {
+    const ev = [];
+    for (const e of (Array.isArray(it.evidence) ? it.evidence : [])) {
+      if (e.kind === "quote") {
+        const ok = quoteFound(e.text, ctx.trNorm); if (!ok) nRejectedQuotes++;
+        ev.push({kind:"quote", text:String(e.text || "").slice(0, 300), valid:ok, lesson:ctx.lesson});
+      } else if (e.kind === "note") {
+        const ok = quoteFound(e.text, ctx.notesNorm);
+        ev.push({kind:"note", text:String(e.text || "").slice(0, 300), valid:ok, lesson:ctx.lesson});
+      } else if (e.kind === "frame") {
+        const i = Number(e.index), f = ctx.frames[i];
+        if (Number.isInteger(i) && f) {
+          const fid = segId + "_" + i; usedFrames.set(fid, f);
+          ev.push({kind:"frame", fid, t:mmss(f.t), what:String(e.what || "").slice(0, 300), valid:true, lesson:ctx.lesson});
+        } else ev.push({kind:"frame", fid:null, what:String(e.what || "").slice(0, 300), valid:false, lesson:ctx.lesson});
+      }
+    }
+    const hasProof = ev.some(e => e.valid);
+    if (!hasProof) nBluff++;
+    const cat = CATS[it.category] ? it.category : "other";
+    const params = (it.params && typeof it.params === "object" && !Array.isArray(it.params)) ? it.params : {};
+    const conf = Math.max(0, Math.min(1, Number(it.confidence) || 0));
+    const target = it.target_id && byId.get(it.target_id);
+
+    if (it.type === "reinforce" && target) {
+      const upd = {
+        evidence: (target.evidence || []).concat(ev).slice(-14),
+        support: (target.support || 1) + 1,
+        lessons: [...new Set((target.lessons || []).concat(ctx.lesson))],
+        updatedAt: Date.now()
+      };
+      if (target.status === "no_evidence" && hasProof) upd.status = "pending";
+      await S.rulesCol.doc(target.id).update(upd);
+      nRe++;
+    } else {
+      const id = newId();
+      const isConflict = it.type === "conflict" && target;
+      await S.rulesCol.doc(id).set({
+        category:cat, title:String(it.title || "").slice(0, 200), rule:String(it.rule || "").slice(0, 1500),
+        params, measurable: !!it.measurable, whyNot:String(it.why_not_measurable || "").slice(0, 500),
+        evidence: ev, confidence: conf, status: hasProof ? "pending" : "no_evidence",
+        support:1, lessons:[ctx.lesson], conflicts: isConflict ? [target.id] : [], userNote:"",
+        createdAt:Date.now(), updatedAt:Date.now()
+      });
+      byId.set(id, {id});
+      if (isConflict) {
+        await S.rulesCol.doc(target.id).update({conflicts:[...new Set((target.conflicts || []).concat(id))], updatedAt:Date.now()});
+        nConf++;
+      } else nNew++;
+    }
+  }
+  for (const [fid, f] of usedFrames) {
+    try { await S.framesCol.doc(fid).set({lesson:ctx.lesson, t:mmss(f.t), dataUrl: await makeThumb(f.blob), at:Date.now()}); } catch (e) {}
+  }
+  await S.segCol.doc(segId).set({
+    lesson:ctx.lesson, at:Date.now(), summary:String(out && out.lesson_summary || "").slice(0, 2000),
+    unclear:(Array.isArray(out && out.unclear) ? out.unclear : []).map(x => String(x).slice(0, 400)).slice(0, 30),
+    audio:String(out && out.audio_quality || ""), visual:String(out && out.visual_quality || ""),
+    frames:ctx.frames.length, transcript:ctx.transcriptText.slice(0, 50000), notes:ctx.notes.slice(0, 5000),
+    counts:{items:items.length, nNew, nRe, nConf, nBluff}
+  });
+  let r = "یاد گرفت: " + fa(nNew) + " قانون تازه";
+  if (nRe) r += "، " + fa(nRe) + " تکرار قانون قبلی";
+  if (nConf) r += "، " + fa(nConf) + " تناقض با قبلی‌ها";
+  if (!items.length) r = "توی این بخش نکته‌ی آموزشی پیدا نکرد.";
+  if (nBluff) r += "<br><b>" + fa(nBluff) + " مورد بی‌مدرک بود و قابل تأیید نیست.</b>";
+  if (nRejectedQuotes) r += "<br>" + fa(nRejectedQuotes) + " نقل‌قول توی حرف‌های مدرس پیدا نشد و رد شد.";
+  r += "<br>برای بررسی برو به تب «دانش».";
+  return r;
+}
+
+/* ---------- knowledge view ---------- */
+const confirmedOK = c => S.rules.some(r => r.category === c && r.status === "confirmed" && r.measurable);
+const pendingAny = c => S.rules.some(r => r.category === c && (r.status === "pending" || (r.status === "confirmed" && !r.measurable)));
+function readiness(){
+  const missing = [];
+  if (!confirmedOK("timeframe")) missing.push("تایم‌فریم");
+  if (!confirmedOK("entry_long") && !confirmedOK("entry_short")) missing.push("قانون ورود");
+  if (!confirmedOK("stop_loss")) missing.push("حد ضرر");
+  if (!confirmedOK("take_profit")) missing.push("خروج و تارگت");
+  return {ready: missing.length === 0, missing};
+}
+function candleSVG(state){
+  const fill = state === "done" ? "var(--buy)" : "none";
+  const stroke = state === "done" ? "var(--buy)" : state === "wait" ? "var(--mark)" : "var(--line)";
+  const bodyH = state === "none" ? 12 : 38, top = state === "none" ? 46 : 18;
+  return '<svg viewBox="0 0 20 70" aria-hidden="true"><line x1="10" y1="' + (top - 12) + '" x2="10" y2="' + (top + bodyH + 10) + '" stroke="' + stroke + '" stroke-width="2"/>'
+    + '<rect x="3" y="' + top + '" width="14" height="' + bodyH + '" rx="2" fill="' + (state === "none" ? "var(--line)" : fill) + '" stroke="' + stroke + '" stroke-width="2"/></svg>';
+}
+function renderKnow(){
+  $("#candles").innerHTML = CANDLES.map(c => {
+    const st = confirmedOK(c) ? "done" : pendingAny(c) ? "wait" : "none";
+    const req = ["timeframe","entry_long","entry_short","stop_loss","take_profit"].includes(c);
+    return '<div class="candle' + (req ? " req" : "") + '" title="' + esc(CATS[c]) + '">' + candleSVG(st) + "<span>" + SHORT[c] + "</span></div>";
+  }).join("");
+  const rd = readiness();
+  $("#ready-text").innerHTML = rd.ready
+    ? '<b class="ok">آماده‌ی بک‌تسته.</b> بخش‌های اصلی استراتژی همه تأیید شدن.'
+    : '<b class="warnc">هنوز کامل نیست.</b> کم داره: ' + rd.missing.join("، ") + ". (پررنگ‌ها لازمن؛ خرید یا فروش کافیه.)";
+
+  const counts = {all:S.rules.length};
+  Object.keys(STATUS).forEach(k => counts[k] = S.rules.filter(r => r.status === k).length);
+  const fl = [["all","همه"],["pending","منتظر تأیید"],["confirmed","تأییدشده"],["no_evidence","بی‌مدرک"],["rejected","ردشده"]];
+  $("#filters").innerHTML = fl.map(([k, l]) => '<button class="chip' + (S.filter === k ? " on" : "") + '" data-filter="' + k + '">' + l + " " + fa(counts[k] || 0) + "</button>").join("");
+  const badge = $("#badge"); badge.textContent = fa(counts.pending || 0); badge.classList.toggle("hidden", !counts.pending);
+
+  const order = {pending:0, no_evidence:1, confirmed:2, rejected:3};
+  const list = S.rules.filter(r => S.filter === "all" || r.status === S.filter)
+    .sort((a, b) => (order[a.status] - order[b.status]) || (CANDLES.indexOf(a.category) - CANDLES.indexOf(b.category)) || (a.createdAt - b.createdAt));
+  if (!S.db) { $("#rules").innerHTML = '<p class="muted small">دفترچه در دسترس نیست.</p>'; return; }
+  if (!list.length) { $("#rules").innerHTML = '<p class="muted small">' + (S.rules.length ? "توی این دسته چیزی نیست." : "شاگرد هنوز چیزی یاد نگرفته. از تب «کلاس» شروع کن.") + "</p>"; return; }
+  const openIds = new Set([...document.querySelectorAll("#rules details[open]")].map(d => d.dataset.id));
+  $("#rules").innerHTML = list.map(r => ruleHTML(r, openIds.has(r.id))).join("");
+  document.querySelectorAll("#rules details[open]").forEach(loadThumbs);
+  renderConn();
+}
+function ruleHTML(r, open){
+  const ev = r.evidence || [], valid = ev.filter(e => e.valid).length;
+  const params = Object.entries(r.params || {}).map(([k, v]) => "<code>" + esc(k) + ": " + esc(typeof v === "object" ? JSON.stringify(v) : v) + "</code>").join("");
+  const evHTML = ev.map(e => {
+    const v = e.valid ? '<span class="v ok">پیدا شد</span>' : '<span class="v bad">پیدا نشد</span>';
+    if (e.kind === "frame") return '<div class="ev">' + v + " عکس " + esc(e.t || "") + " از «" + esc(e.lesson) + "»: " + esc(e.what) + (e.fid ? '<div data-fid="' + esc(e.fid) + '" class="muted small">عکس در حال باز شدن…</div>' : "") + "</div>";
+    const label = e.kind === "note" ? "یادداشت تو" : "حرف مدرس";
+    return '<div class="ev">' + v + " " + label + " در «" + esc(e.lesson) + "»: «" + esc(e.text) + "»</div>";
+  }).join("");
+  const conflicts = (r.conflicts || []).length ? '<p class="small bad">با ' + r.conflicts.map(c => '<span class="rid">' + esc(c) + "</span>").join(" ") + " تناقض داره. یکی رو رد کن.</p>" : "";
+  const canConfirm = valid > 0;
+  return '<article class="rule s-' + r.status + '">'
+    + '<div class="hd"><span class="rid">' + esc(r.id) + '</span><span class="tag">' + esc(CATS[r.category] || r.category) + '</span><span class="st ' + (r.status === "confirmed" ? "ok" : r.status === "no_evidence" ? "bad" : r.status === "pending" ? "warnc" : "muted") + '">' + STATUS[r.status] + "</span></div>"
+    + "<h3>" + esc(r.title) + "</h3><p>" + esc(r.rule) + "</p>"
+    + (params ? '<div class="params">' + params + "</div>" : "")
+    + (!r.measurable ? '<p class="small warnc">قابل کدنویسی نیست: ' + esc(r.whyNot || "نیاز به قضاوت انسانی داره") + "</p>" : "")
+    + conflicts
+    + '<div class="meta"><span>تکرار در جلسه‌ها: ' + fa(r.support || 1) + "</span><span>اطمینان شاگرد: " + fa(Math.round((r.confidence || 0) * 100)) + "٪</span><span>مدرک معتبر: " + fa(valid) + " از " + fa(ev.length) + "</span></div>"
+    + '<details data-id="' + esc(r.id) + '"' + (open ? " open" : "") + "><summary>مدرک‌ها و اصلاح</summary>" + (evHTML || '<p class="small muted">مدرکی نداره.</p>')
+    + '<label class="f">اصلاح یا توضیح تو (وارد فایل دانش می‌شه)</label><textarea data-note="' + esc(r.id) + '">' + esc(r.userNote || "") + '</textarea>'
+    + '<div class="row" style="margin-top:6px"><button class="btn" data-act="note" data-id="' + esc(r.id) + '">ذخیره‌ی اصلاح</button></div></details>'
+    + '<div class="row" style="margin-top:10px">'
+    + (r.status === "confirmed" || r.status === "rejected"
+        ? '<button class="btn" data-act="undo" data-id="' + esc(r.id) + '">برگردون به بررسی</button>'
+        : '<button class="btn go" data-act="ok" data-id="' + esc(r.id) + '"' + (canConfirm ? "" : " disabled") + '>درسته، تأیید</button><button class="btn stop" data-act="no" data-id="' + esc(r.id) + '">غلطه، رد</button>')
+    + "</div>" + (!canConfirm && r.status !== "rejected" ? '<p class="small bad">بدون مدرک معتبر قابل تأیید نیست.</p>' : "")
+    + "</article>";
+}
+async function loadThumbs(det){
+  for (const el of det.querySelectorAll("[data-fid]")) {
+    const fid = el.dataset.fid;
+    if (S.thumbs.has(fid)) { setThumb(el, S.thumbs.get(fid)); continue; }
+    try {
+      const s = await S.framesCol.doc(fid).get();
+      const url = s.exists ? s.data().dataUrl : null;
+      S.thumbs.set(fid, url); setThumb(el, url);
+    } catch (e) { el.textContent = "عکس باز نشد."; }
+  }
+}
+function setThumb(el, url){ if (url && /^data:image\//.test(url)) el.innerHTML = '<img alt="عکس مدرک" src="' + url + '">'; else el.textContent = "عکس پاک شده."; }
+
+$("#rules").addEventListener("toggle", e => { if (e.target.tagName === "DETAILS" && e.target.open) loadThumbs(e.target); }, true);
+$("#filters").addEventListener("click", e => { const b = e.target.closest("[data-filter]"); if (b) { S.filter = b.dataset.filter; renderKnow(); } });
+$("#rules").addEventListener("click", async e => {
+  const b = e.target.closest("[data-act]"); if (!b || !S.rulesCol) return;
+  const id = b.dataset.id, r = S.rules.find(x => x.id === id); if (!r) return;
+  b.disabled = true;
+  try {
+    if (b.dataset.act === "ok") { if ((r.evidence || []).some(x => x.valid)) await S.rulesCol.doc(id).update({status:"confirmed", updatedAt:Date.now()}); }
+    else if (b.dataset.act === "no") await S.rulesCol.doc(id).update({status:"rejected", updatedAt:Date.now()});
+    else if (b.dataset.act === "undo") await S.rulesCol.doc(id).update({status:(r.evidence || []).some(x => x.valid) ? "pending" : "no_evidence", updatedAt:Date.now()});
+    else if (b.dataset.act === "note") {
+      const ta = document.querySelector('textarea[data-note="' + CSS.escape(id) + '"]');
+      await S.rulesCol.doc(id).update({userNote:ta.value.trim().slice(0, 1500), updatedAt:Date.now()});
+      b.textContent = "ذخیره شد";
+    }
+  } catch (err) { b.textContent = "ذخیره نشد"; }
+  b.disabled = false;
+});
+function renderSegments(){
+  const box = $("#segments");
+  if (!S.segments.length) { box.innerHTML = '<p class="muted small">هنوز هیچ بخشی یاد گرفته نشده.</p>'; return; }
+  box.innerHTML = S.segments.map(s => {
+    const c = s.counts || {};
+    const q = (s.audio === "poor" || s.audio === "none") ? '<span class="warnc">صدا ضعیف بود</span>' : "";
+    const v = (s.visual === "poor" || s.visual === "none") ? '<span class="warnc">تصویر ضعیف بود</span>' : "";
+    return '<div class="seg"><h3>' + esc(s.lesson) + '</h3><div class="meta"><span>' + new Date(s.at).toLocaleString("fa-IR", {dateStyle:"short", timeStyle:"short"}) + "</span><span>" + fa(c.nNew || 0) + " قانون تازه</span>" + q + v + "</div>"
+      + (s.summary ? '<p class="small">' + esc(s.summary) + "</p>" : "")
+      + ((s.unclear || []).length ? '<p class="small warnc">چیزهایی که مطمئن نشد:</p><ul class="plain small">' + s.unclear.map(u => "<li>" + esc(u) + "</li>").join("") + "</ul>" : "")
+      + "</div>";
+  }).join("");
+}
+
+/* ---------- exam ---------- */
+$("#b-teach").addEventListener("click", () => exam(null));
+$("#b-ask").addEventListener("click", () => { const q = $("#q").value.trim(); if (q) exam(q); else $("#q").focus(); });
+$("#b-exstop").addEventListener("click", () => S.examCtl && S.examCtl.abort());
+
+async function exam(question){
+  const ans = $("#answer"), chk = $("#cite-check");
+  chk.textContent = "";
+  if (!S.sample) { ans.textContent = "هوش مصنوعی در دسترس نیست."; return; }
+  const pool = S.rules.filter(r => r.status === "confirmed" || r.status === "pending");
+  if (!pool.length) { ans.textContent = "دفترچه خالیه. شاگرد هنوز چیزی یاد نگرفته که امتحان بده."; return; }
+  const kb = pool.map(r => "[" + r.id + "] (" + r.category + ", " + (r.status === "confirmed" ? "CONFIRMED" : "NOT YET CONFIRMED") + ", measurable=" + !!r.measurable + ") " + r.title + ": " + r.rule
+    + (Object.keys(r.params || {}).length ? " params=" + JSON.stringify(r.params) : "") + (r.userNote ? " | student correction: " + r.userNote : "")).join("\n");
+  const task = question
+    ? "Answer the student's question: «" + question + "». Answer in Persian, only from the rules below. If the rules do not contain the answer, reply exactly «این رو یاد نگرفتم.» and then say in one sentence what kind of lesson would be needed."
+    : "Explain, in Persian, the complete trading strategy you learned, step by step as a trader would execute it (market, timeframe, entry, stop loss, exit, risk, filters). Then add a final section titled «چیزهایی که هنوز نمی‌دونم» listing what is missing to trade it mechanically.";
+  const prompt = "You are Shagerd, an apprentice trading bot being examined by its owner. You know ONLY the rules listed below; you have no other trading knowledge. " + task
+    + "\nHard rules: every sentence that states a rule must end with the id of the rule it comes from, in square brackets like [R1a2b]. Never cite an id that is not listed. Never add facts, numbers or settings that are not in the rules. If you rely on a NOT YET CONFIRMED rule, say so. Plain text, no markdown.\n\n=== RULES ===\n" + kb;
+  const ctl = new AbortController(); S.examCtl = ctl;
+  $("#b-teach").disabled = $("#b-ask").disabled = true; $("#b-exstop").classList.remove("hidden");
+  ans.textContent = "شاگرد داره فکر می‌کنه…";
+  let text = "";
+  try {
+    const r = await S.sample(prompt, {cache:false, signal:ctl.signal, onText:({text:t}) => { text = t; ans.textContent = t; }});
+    text = r.text;
+  } catch (e) { text = e.text || ""; if (e.code !== "cancelled") chk.innerHTML = '<span class="bad">' + esc(errText(e)) + "</span>"; }
+  if (text) {
+    const ids = new Set(S.rules.map(r => r.id));
+    let good = 0, bad = 0;
+    ans.innerHTML = esc(text).replace(/\[(R[0-9a-z]{4})\]/g, (m, id) => { const k = ids.has(id); k ? good++ : bad++; return '<span class="cite ' + (k ? "ok" : "bad") + '">' + id + "</span>"; });
+    const uncited = text.split(/[.!؟?\n]+/).filter(s => norm(s).split(" ").length > 6 && !/\[R[0-9a-z]{4}\]/.test(s) && !/یاد نگرفتم|نمی‌دونم|نمیدونم/.test(s)).length;
+    chk.innerHTML = "ارجاع درست: <b class='ok'>" + fa(good) + "</b>، ارجاع ساختگی: <b class='" + (bad ? "bad" : "ok") + "'>" + fa(bad) + "</b>، جمله‌ی بدون ارجاع: <b class='" + (uncited ? "warnc" : "ok") + "'>" + fa(uncited) + "</b>"
+      + (bad || uncited ? "<br><span class='warnc'>جمله‌های بدون ارجاع یا با ارجاع قرمز رو باور نکن؛ از دفترچه نیومدن.</span>" : "<br><span class='ok'>همه‌ی جمله‌ها به قانون‌های واقعی دفترچه برمی‌گردن.</span>");
+  }
+  S.examCtl = null; $("#b-teach").disabled = $("#b-ask").disabled = false; $("#b-exstop").classList.add("hidden");
+}
+
+/* ---------- export ---------- */
+function renderOut(){
+  const rd = readiness(), btn = $("#b-export");
+  const n = (S.meta && S.meta.exportVersion || 0) + 1;
+  $("#out-ready").innerHTML = rd.ready
+    ? '<b class="ok">آماده‌ست.</b> فایل بعدی: <span class="rid">shagerd_brain_v' + n + ".json</span>"
+    : '<b class="warnc">هنوز نمی‌شه خروجی گرفت.</b> این‌ها تأیید نشدن: ' + rd.missing.join("، ") + ".";
+  btn.disabled = !rd.ready || !S.db;
+}
+$("#b-export").addEventListener("click", async () => {
+  const msg = $("#out-msg"); msg.innerHTML = "";
+  if (!readiness().ready) return;
+  const n = (S.meta && S.meta.exportVersion || 0) + 1, filename = "shagerd_brain_v" + n + ".json";
+  const conf = S.rules.filter(r => r.status === "confirmed");
+  const brain = {
+    format:"shagerd-brain", version:n, exported_at:new Date().toISOString(),
+    lessons:[...new Set(S.segments.map(s => s.lesson))],
+    rules: conf.filter(r => r.measurable).map(r => ({id:r.id, category:r.category, title:r.title, rule:r.rule, params:r.params || {}, user_note:r.userNote || "", support:r.support || 1, evidence_count:(r.evidence || []).filter(e => e.valid).length})),
+    not_measurable: conf.filter(r => !r.measurable).map(r => ({id:r.id, category:r.category, title:r.title, rule:r.rule, reason:r.whyNot, user_note:r.userNote || ""})),
+    open_conflicts: conf.filter(r => (r.conflicts || []).some(c => S.rules.find(x => x.id === c && x.status === "confirmed"))).map(r => r.id),
+    unclear: S.segments.flatMap(s => (s.unclear || []).map(u => ({lesson:s.lesson, text:u}))),
+    backtest_policy:{no_lookahead:true, decisions_on_closed_candles_only:true}
+  };
+  const json = JSON.stringify(brain, null, 2);
+  if (brain.open_conflicts.length) msg.innerHTML = '<div class="notice">بین قانون‌های تأییدشده تناقض هست: ' + brain.open_conflicts.join("، ") + ". بهتره قبل از بک‌تست یکی رو رد کنی.</div>";
+  if (!S.downloads) { const p = $("#out-json"); p.textContent = json; p.classList.remove("hidden"); msg.innerHTML += '<div class="notice">دانلود اینجا در دسترس نیست. متن زیر رو کپی کن و با اسم ' + filename + " ذخیره کن.</div>"; return; }
+  try {
+    await S.downloads.save({filename, data:new Blob([json], {type:"application/json"})});
+    await S.base.set({...(S.meta || {}), exportVersion:n, lastExport:Date.now()});
+    msg.innerHTML += '<div class="notice green">' + filename + " دانلود شد.</div>";
+  } catch (e) {
+    msg.innerHTML += '<div class="notice red">دانلود انجام نشد' + (e && e.code === "declined" ? " (لغو کردی)" : "") + ".</div>";
+  }
+});
+
+$("#b-delimg").addEventListener("click", async () => {
+  const m = $("#clean-msg"); if (!S.framesCol) return;
+  m.textContent = "در حال پاک کردن…";
+  try {
+    const q = await S.framesCol.get(); for (const d of q.docs) await S.framesCol.doc(d.id).delete();
+    S.thumbs.clear(); m.innerHTML = '<span class="ok">' + fa(q.size) + " عکس پاک شد. قانون‌ها سر جاشونن.</span>";
+  } catch (e) { m.innerHTML = '<span class="bad">پاک نشد.</span>'; }
+});
+$("#b-reset").addEventListener("click", async () => {
+  const b = $("#b-reset"), m = $("#clean-msg"); if (!S.rulesCol) return;
+  if (Date.now() - S.resetArmed > 5000) { S.resetArmed = Date.now(); b.textContent = "مطمئنی؟ دوباره بزن"; setTimeout(() => b.textContent = "پاک کردن کل دانش", 5000); return; }
+  S.resetArmed = 0; b.disabled = true; m.textContent = "در حال پاک کردن…";
+  try {
+    for (const col of [S.rulesCol, S.segCol, S.framesCol]) { const q = await col.get(); for (const d of q.docs) await col.doc(d.id).delete(); }
+    m.innerHTML = '<span class="ok">دفترچه خالی شد.</span>';
+  } catch (e) { m.innerHTML = '<span class="bad">کامل پاک نشد.</span>'; }
+  b.disabled = false; b.textContent = "پاک کردن کل دانش";
+});
+</script>
+</body>
+</html>
